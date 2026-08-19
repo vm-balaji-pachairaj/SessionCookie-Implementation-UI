@@ -25,7 +25,7 @@ export default function CurrentUserToken() {
     try {
       setLoading(true);
 
-      const response = await fetch("http://localhost:5000/thistoken", {
+      const response = await fetch("http://localhost:5000/thi", {
         method: "GET",
         credentials: "include",
         headers: {
@@ -130,7 +130,9 @@ export default function CurrentUserToken() {
           </div>
         ) : (
           <div>
-         
+            <InfoRow label="User ID" value={tokenData.sub} />
+
+            <InfoRow label="Username" value={tokenData.username} />
 
             <InfoRow label="NT ID" value={tokenData.userDetails?.nt_id} />
 
