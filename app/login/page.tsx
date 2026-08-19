@@ -37,9 +37,36 @@ export default function LoginPage() {
       //
       // Both are HttpOnly cookies.
 
+      // Clear any pending credentials (cleanup) and continue
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("pending_login_credentials");
+      }
+
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Login error:", error);
+      console.error("Error response:", error?.response);
+
+      // If backend reports an existing session, redirect to continue-session
+      if (
+        error?.response?.status === 409 &&
+        error?.response?.data?.code === "USER_ALREADY_LOGGED_IN"
+      ) {
+        // Save credentials temporarily so the continue flow can post them.
+        if (typeof window !== "undefined") {
+          try {
+            sessionStorage.setItem(
+              "pending_login_credentials",
+              JSON.stringify({ username, password })
+            );
+          } catch (e) {
+            console.error("Failed to save pending credentials:", e);
+          }
+        }
+
+        router.push("/continue-session");
+        return;
+      }
 
       const message =
         error?.response?.data?.message ||

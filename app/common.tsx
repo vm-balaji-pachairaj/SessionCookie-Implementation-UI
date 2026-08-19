@@ -70,6 +70,17 @@ api.interceptors.response.use(
     }
 
     // ========================================================
+    // If server indicates resource is gone (410), force login
+    // ========================================================
+    if (error.response?.status === 410) {
+      if (typeof window !== "undefined") {
+        window.location.href = "/login";
+      }
+
+      return Promise.reject(error);
+    }
+
+    // ========================================================
     // Only handle 401
     // ========================================================
 
