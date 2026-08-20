@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "../common";
+import IdleTimer from "@/component/IdleTimer";
+import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 
 interface Role {
   user_role_mapping_id: string;
@@ -43,6 +45,11 @@ interface RefreshResponse {
 }
 
 export default function DashboardPage() {
+    const {
+    isIdle,
+    remainingTime,
+    totalWarningTime,
+  } = useIdleTimeout();
   const router = useRouter();
 
   const [data, setData] = useState<DashboardResponse | null>(null);
@@ -106,7 +113,7 @@ export default function DashboardPage() {
       const response = await api.post<RefreshResponse>("/refresh");
 
       setMessage(
-        response.data.message || "Access token refreshed successfully."
+        response.data.message || "Access token refreshed successfully.",
       );
 
       await fetchDashboard();
@@ -114,7 +121,8 @@ export default function DashboardPage() {
       console.error("Refresh error:", error);
 
       setMessage(
-        error?.response?.data?.message || "Session expired. Please login again."
+        error?.response?.data?.message ||
+          "Session expired. Please login again.",
       );
 
       router.push("/login");
@@ -139,7 +147,7 @@ export default function DashboardPage() {
       });
 
       setMessage(
-        `Role changed to ${role.role_master?.role_name || "selected role"}.`
+        `Role changed to ${role.role_master?.role_name || "selected role"}.`,
       );
 
       // Reload dashboard/current user
@@ -223,6 +231,13 @@ export default function DashboardPage() {
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               API Connected
             </div>
+
+            {isIdle && (
+              <IdleTimer
+                remainingTime={remainingTime}
+                totalWarningTime={totalWarningTime}
+              />
+            )}
 
             {/* Logout */}
             <button
@@ -373,7 +388,7 @@ export default function DashboardPage() {
 
               <p className="mt-1 text-sm font-semibold text-slate-800">
                 {data?.currentRole?.find(
-                  (role) => role.role_id === selectedRole
+                  (role) => role.role_id === selectedRole,
                 )?.role_master?.role_name || "No role selected"}
               </p>
             </div>
@@ -404,7 +419,7 @@ export default function DashboardPage() {
                 label="Role"
                 value={
                   data?.currentRole?.find(
-                    (role) => role.role_id === selectedRole
+                    (role) => role.role_id === selectedRole,
                   )?.role_master?.role_name || "-"
                 }
               />
@@ -415,7 +430,7 @@ export default function DashboardPage() {
                 label="Role Mapping ID"
                 value={
                   data?.currentRole?.find(
-                    (role) => role.role_id === selectedRole
+                    (role) => role.role_id === selectedRole,
                   )?.user_role_mapping_id || "-"
                 }
               />
@@ -426,7 +441,7 @@ export default function DashboardPage() {
                 label="Active"
                 value={
                   data?.currentRole?.find(
-                    (role) => role.role_id === selectedRole
+                    (role) => role.role_id === selectedRole,
                   )?.is_active
                     ? "Yes"
                     : "No"
