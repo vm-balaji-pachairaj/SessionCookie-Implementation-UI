@@ -1,6 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "http://localhost:5000/api";
 
 // ============================================================
 // Axios instance
@@ -11,6 +11,9 @@ const api: AxiosInstance = axios.create({
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    Pragma: "no-cache",
+    Expires: "0",
   },
 });
 
@@ -29,6 +32,31 @@ type RetryableAxiosRequestConfig = AxiosRequestConfig & {
 let isRefreshing = false;
 
 let refreshPromise: Promise<void> | null = null;
+
+// ============================================================
+// Request interceptor
+// ============================================================
+
+api.interceptors.request.use((config) => {
+  const method = (config.method || "get").toLowerCase();
+
+  config.headers = {
+    ...config.headers,
+    "Cache-Control": "no-store, no-cache, must-revalidate",
+    Pragma: "no-cache",
+    Expires: "0",
+  };
+
+  // Add a cache-busting query param for GET requests.
+  if (method === "get") {
+    config.params = {
+      ...(config.params || {}),
+      _t: Date.now(),
+    };
+  }
+
+  return config;
+});
 
 // ============================================================
 // Refresh access token
