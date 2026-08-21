@@ -1,4 +1,9 @@
-import axios, { AxiosError, AxiosInstance, AxiosRequestConfig } from "axios";
+import axios, {
+  AxiosError,
+  AxiosHeaders,
+  AxiosInstance,
+  AxiosRequestConfig,
+} from "axios";
 
 const API_URL = "http://localhost:5000/api";
 
@@ -25,27 +30,61 @@ type RetryableAxiosRequestConfig = AxiosRequestConfig & {
   _retry?: boolean;
 };
 
+type RefreshBypassRule = {
+  path: string;
+  methods?: ReadonlyArray<"get" | "post" | "put" | "patch" | "delete">;
+  action?: "reject" | "redirect-login";
+};
+
+const REFRESH_BYPASS_RULES: ReadonlyArray<RefreshBypassRule> = [
+  // Login failures must be handled by the login page itself, not refresh logic.
+  { path: "/login", methods: ["post"], action: "reject" },
+  // Refresh endpoint failure means the session cannot be recovered.
+  { path: "/refresh", action: "redirect-login" },
+];
+
 // ============================================================
 // Refresh state
 // ============================================================
 
-let isRefreshing = false;
-
 let refreshPromise: Promise<void> | null = null;
 
-// ============================================================
-// Request interceptor
-// ============================================================
+const toRequestPath = (url: string): string => {
+  try {
+    return new URL(url, API_URL).pathname;
+  } catch {
+    return url.split("?")[0] || "";
+  }
+};
+
+const getRefreshBypassRule = (
+  url: string,
+  method?: string
+): RefreshBypassRule | undefined => {
+  const requestPath = toRequestPath(url);
+  const requestMethod = (method || "get").toLowerCase();
+
+  return REFRESH_BYPASS_RULES.find((rule) => {
+    const isPathMatch =
+      requestPath === `/api${rule.path}` || requestPath === rule.path;
+    const isMethodMatch =
+      !rule.methods ||
+      rule.methods.includes(
+        requestMethod as "get" | "post" | "put" | "patch" | "delete"
+      );
+    return isPathMatch && isMethodMatch;
+  });
+};
 
 api.interceptors.request.use((config) => {
   const method = (config.method || "get").toLowerCase();
 
-  config.headers = {
+  config.headers = AxiosHeaders.from({
     ...config.headers,
     "Cache-Control": "no-store, no-cache, must-revalidate",
     Pragma: "no-cache",
     Expires: "0",
-  };
+  });
 
   // Add a cache-busting query param for GET requests.
   if (method === "get") {
@@ -116,14 +155,18 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // ========================================================
-    // Never refresh the refresh API itself
-    // ========================================================
-
     const requestUrl = originalRequest.url || "";
 
-    if (requestUrl.includes("/refresh")) {
-      if (typeof window !== "undefined") {
+    // ========================================================
+    // Skip refresh flow for configured routes (extensible).
+    // ========================================================
+    const bypassRule = getRefreshBypassRule(requestUrl, originalRequest.method);
+
+    if (bypassRule) {
+      if (
+        bypassRule.action === "redirect-login" &&
+        typeof window !== "undefined"
+      ) {
         window.location.href = "/login";
       }
 
