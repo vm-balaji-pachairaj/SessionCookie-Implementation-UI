@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 type TokenData = {
   sub?: string | number;
@@ -20,37 +20,41 @@ type TokenData = {
 export default function CurrentUserToken() {
   const [tokenData, setTokenData] = useState<TokenData | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const fetchCurrentUser = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      const response = await fetch("http://localhost:5000/thi", {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch current user");
-      }
-
-      const data = await response.json();
-
-      setTokenData(data.tokenData);
-    } catch (error) {
-      console.error("Failed to fetch token data:", error);
-      setTokenData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [refreshTick, setRefreshTick] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function fetchCurrentUser() {
+      try {
+        setLoading(true);
+
+        const response = await fetch("http://localhost:5000/thi", {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch current user");
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) setTokenData(data.tokenData);
+      } catch (error) {
+        console.error("Failed to fetch token data:", error);
+        if (!cancelled) setTokenData(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
     fetchCurrentUser();
-  }, [fetchCurrentUser]);
+    return () => { cancelled = true; };
+  }, [refreshTick]);
 
   return (
     <div
@@ -91,7 +95,7 @@ export default function CurrentUserToken() {
           </h3>
 
           <button
-            onClick={fetchCurrentUser}
+            onClick={() => setRefreshTick((t) => t + 1)}
             disabled={loading}
             style={{
               padding: "8px 16px",
