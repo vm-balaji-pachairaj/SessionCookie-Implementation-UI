@@ -46,6 +46,18 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error("Login error:", error);
       console.error("Error response:", error?.response);
+      console.error("Error code:", error?.code);
+      console.error("Error message:", error?.message);
+
+      // Network error - backend not reachable
+      if (error?.code === 'ERR_NETWORK' || (error?.message && error.message.includes('Network Error'))) {
+        const backendUrl = 'http://localhost:5000';
+        setError(
+          `Unable to connect to backend API at ${backendUrl}. ` +
+          'Make sure the backend server is running with "npm run start:dev" from the api folder.'
+        );
+        return;
+      }
 
       // If backend reports an existing session, redirect to continue-session
       if (

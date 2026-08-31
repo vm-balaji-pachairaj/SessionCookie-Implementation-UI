@@ -98,6 +98,32 @@ api.interceptors.request.use((config) => {
 });
 
 // ============================================================
+// Error interceptor for network errors
+// ============================================================
+
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    // Network error - backend is unreachable
+    if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED') {
+      console.error(
+        'Network Error: Unable to connect to backend. ' +
+        'Make sure the API server is running at http://localhost:5000'
+      );
+    }
+
+    if (error.message === 'Network Error') {
+      console.error(
+        'Network Error: Unable to connect to backend. ' +
+        'Ensure CORS is configured and the server is accessible.'
+      );
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// ============================================================
 // Refresh access token
 // ============================================================
 
@@ -118,7 +144,7 @@ const refreshAccessToken = async (): Promise<void> => {
 };
 
 // ============================================================
-// Response interceptor
+// Response interceptor for auth token handling
 // ============================================================
 
 api.interceptors.response.use(

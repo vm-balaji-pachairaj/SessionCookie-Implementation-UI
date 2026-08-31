@@ -44,6 +44,14 @@ interface RefreshResponse {
   user_role_mapping_id?: string;
 }
 
+interface TestLoggerResponse {
+  success: boolean;
+  message: string;
+  logSeverity: 'info' | 'debug' | 'warn' | 'error';
+  timestamp: string;
+  statusCode: number;
+}
+
 export default function DashboardPage() {
     const {
     isIdle,
@@ -61,6 +69,9 @@ export default function DashboardPage() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
   const [message, setMessage] = useState("");
+  const [testLoggerData, setTestLoggerData] =
+    useState<TestLoggerResponse | null>(null);
+  const [testLoggerLoading, setTestLoggerLoading] = useState(false);
 
   // ============================================================
   // Fetch dashboard
@@ -180,6 +191,29 @@ export default function DashboardPage() {
       router.push("/login");
     } finally {
       setLoggingOut(false);
+    }
+  };
+
+  // ============================================================
+  // Test Logger
+  // ============================================================
+
+  const handleTestLogger = async () => {
+    try {
+      setTestLoggerLoading(true);
+      setMessage("");
+
+      const response = await api.post<TestLoggerResponse>("/test-logger");
+
+      setTestLoggerData(response.data);
+      setMessage(response.data.message);
+    } catch (error: any) {
+      console.error("Test logger error:", error);
+
+      setMessage(error?.response?.data?.message || "Failed to test logger.");
+      setTestLoggerData(null);
+    } finally {
+      setTestLoggerLoading(false);
     }
   };
 
@@ -323,6 +357,100 @@ export default function DashboardPage() {
         ==================================================== */}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
+          {/* ==================================================
+              Test Logger
+          ================================================== */}
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                📝
+              </div>
+
+              <div>
+                <h2 className="font-semibold text-slate-900">Test Logger</h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Add a log with random severity level.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleTestLogger}
+              disabled={testLoggerLoading}
+              className="mt-6 rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-600/20 transition hover:bg-amber-500 disabled:opacity-50"
+            >
+              {testLoggerLoading ? "Testing..." : "Add Log Entry"}
+            </button>
+
+            {/* Log Result Display */}
+            {testLoggerData && (
+              <div className="mt-6 space-y-3 border-t border-slate-100 pt-6">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold text-white ${
+                      testLoggerData.logSeverity === "info"
+                        ? "bg-blue-600"
+                        : testLoggerData.logSeverity === "debug"
+                          ? "bg-gray-600"
+                          : testLoggerData.logSeverity === "warn"
+                            ? "bg-yellow-600"
+                            : "bg-red-600"
+                    }`}
+                  >
+                    {testLoggerData.logSeverity.charAt(0).toUpperCase()}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-900">
+                      Log Severity
+                    </p>
+
+                    <p className="text-xs text-slate-500">
+                      {testLoggerData.logSeverity.toUpperCase()}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-xs font-medium text-slate-500">
+                    Status Code
+                  </p>
+
+                  <span
+                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                      testLoggerData.statusCode === 200 ||
+                      testLoggerData.statusCode === 202
+                        ? "bg-green-100 text-green-800"
+                        : "bg-orange-100 text-orange-800"
+                    }`}
+                  >
+                    {testLoggerData.statusCode}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-xs font-medium text-slate-500">
+                    Timestamp
+                  </p>
+
+                  <p className="truncate text-right text-xs font-mono text-slate-700">
+                    {new Date(testLoggerData.timestamp).toLocaleTimeString()}
+                  </p>
+                </div>
+
+                <div className="pt-2">
+                  <p className="text-xs font-medium text-slate-500">Message</p>
+
+                  <p className="mt-1 text-sm text-slate-700">
+                    {testLoggerData.message}
+                  </p>
+                </div>
+              </div>
+            )}
+          </section>
+
           {/* ==================================================
               Role selector
           ================================================== */}
