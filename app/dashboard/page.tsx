@@ -1,10 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import api from "../common";
 import IdleTimer from "@/component/IdleTimer";
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
+import ViewPermissions from "@/component/ViewPermissions";
+import Sidebar from "@/component/Sidebar";
+import MenuPageRenderer from "@/component/MenuPageRenderer";
+import { setMenus } from "../store/menuSlice";
+import { setPermissions } from "../store/permissionsSlice";
+import { useDispatch } from "react-redux";
+import { clearPermissions } from "../store/permissionsSlice";
+import { clearMenus } from "../store/menuSlice";
 
 interface Role {
   user_role_mapping_id: string;
@@ -21,6 +29,15 @@ interface Role {
   };
 }
 
+interface Permission {
+  permission: string;
+  lob: string;
+  page: string;
+  module: string;
+  section: string;
+  access: string;
+}
+
 interface DashboardResponse {
   message: string;
   currentRole: Role[];
@@ -28,6 +45,9 @@ interface DashboardResponse {
     id: string;
     username: string;
   };
+  permissions: Permission[];
+  menus: string[];
+  landingPage: string[][];
   role_id: string;
 }
 
@@ -59,6 +79,7 @@ export default function DashboardPage() {
     totalWarningTime,
   } = useIdleTimeout();
   const router = useRouter();
+  const pathname = usePathname();
 
   const [data, setData] = useState<DashboardResponse | null>(null);
 
@@ -72,6 +93,18 @@ export default function DashboardPage() {
   const [testLoggerData, setTestLoggerData] =
     useState<TestLoggerResponse | null>(null);
   const [testLoggerLoading, setTestLoggerLoading] = useState(false);
+  const [activeNav, setActiveNav] = useState("");
+
+  const dispatch = useDispatch();
+  // ── Axios error helper ────────────────────────────────────────
+  function errMsg(e: unknown, fallback: string) {
+    if (e && typeof e === "object" && "response" in e) {
+      const r = (e as { response?: { data?: { message?: string }; status?: number } }).response;
+      if (r?.status === 401) return null; // signal 401
+      return r?.data?.message ?? fallback;
+    }
+    return fallback;
+  }
 
   // ============================================================
   // Fetch dashboard
@@ -83,22 +116,24 @@ export default function DashboardPage() {
       setMessage("");
 
       const response = await api.get<DashboardResponse>("/dashboard");
-
       setData(response.data);
+      dispatch(setPermissions(response.data.permissions));   
+      dispatch(setMenus(response.data.menus)); 
 
       setSelectedRole(response.data.role_id);
-      // Find current role from token-backed response
-      if (response.data.currentRole?.length) {
+      // Set active nav to the current route on first load, then fall back to the landing page.
+      if (!activeNav) {
+        setActiveNav(
+          response.data.landingPage?.[0]?.[2] ||
+            response.data.menus?.[0] ||
+            ""
+        );
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Dashboard error:", error);
-
-      if (error?.response?.status === 401) {
-        router.push("/login");
-        return;
-      }
-
-      setMessage(error?.response?.data?.message || "Unable to load dashboard.");
+      const msg = errMsg(error, "Unable to load dashboard.");
+      if (msg === null) { router.push("/login"); return; }
+      setMessage(msg);
     } finally {
       setLoading(false);
     }
@@ -109,7 +144,44 @@ export default function DashboardPage() {
   // ============================================================
 
   useEffect(() => {
-    fetchDashboard();
+    let cancelled = false;
+    async function load() {
+      try {
+        setLoading(true);
+        setMessage("");
+        const response = await api.get<DashboardResponse>("/dashboard");
+        dispatch(setMenus(response.data.menus));
+        dispatch(setPermissions(response.data.permissions)); 
+        if (cancelled) return;
+        setData(response.data);
+        setSelectedRole(response.data.role_id);
+        setActiveNav((prev) => {
+          if (prev) return prev;
+
+          const currentMenu = response.data.menus?.find(
+            (menu) => `/${menu}` === pathname
+          );
+
+          return (
+            currentMenu ||
+            response.data.landingPage?.[0]?.[2] ||
+            response.data.menus?.[0] ||
+            ""
+          );
+        });
+      } catch (error: unknown) {
+        if (cancelled) return;
+        console.error("Dashboard error:", error);
+        const msg = errMsg(error, "Unable to load dashboard.");
+        if (msg === null) { router.push("/login"); return; }
+        setMessage(msg);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ============================================================
@@ -128,14 +200,9 @@ export default function DashboardPage() {
       );
 
       await fetchDashboard();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Refresh error:", error);
-
-      setMessage(
-        error?.response?.data?.message ||
-          "Session expired. Please login again.",
-      );
-
+      setMessage(errMsg(error, "Session expired. Please login again.") ?? "Session expired. Please login again.");
       router.push("/login");
     } finally {
       setRefreshing(false);
@@ -147,30 +214,47 @@ export default function DashboardPage() {
   // ============================================================
 
   const handleRoleChange = async (role: Role) => {
-    try {
-      setSelectedRole(role.role_id);
-      setMessage("");
+  try {
+    setSelectedRole(role.role_id);
+    setMessage("");
 
-      await api.post("/changerole", {
-        user_role_mapping_id: role.user_role_mapping_id,
+    // /changerole already returns permissions + menus directly —
+    // no need to call /dashboard again at all
+    const changeRoleRes = await api.post("/changerole", {
+      user_role_mapping_id: role.user_role_mapping_id,
+      role_id: role.role_id,
+    });
 
-        role_id: role.role_id,
-      });
+    dispatch(setMenus(changeRoleRes.data.menus));
+    dispatch(setPermissions(changeRoleRes.data.permissions));
 
-      setMessage(
-        `Role changed to ${role.role_master?.role_name || "selected role"}.`,
-      );
+    setData((prev) => prev ? {
+      ...prev,
+      currentRole: changeRoleRes.data.currentRole ?? prev.currentRole,
+      permissions: changeRoleRes.data.permissions,
+      menus: changeRoleRes.data.menus,
+      landingPage: changeRoleRes.data.landingPage,
+    } : prev);
 
-      // Reload dashboard/current user
-      await fetchDashboard();
-    } catch (error: any) {
-      console.error("Role change error:", error);
+    setSelectedRole(role.role_id);
 
-      setMessage(error?.response?.data?.message || "Unable to change role.");
+    const landingKey =
+      changeRoleRes.data.landingPage?.[0]?.[2] ??
+      changeRoleRes.data.menus?.[0] ??
+      "";
 
-      // Restore dashboard state
-      await fetchDashboard();
-    }
+    setActiveNav(landingKey);
+    router.push(`/${landingKey}`);
+    setMessage(`Role changed to ${role.role_master?.role_name || "selected role"}.`);
+  } catch (error: unknown) {
+    console.error("Role change error:", error);
+    setMessage(errMsg(error, "Unable to change role.") ?? "Unable to change role.");
+  }
+  };
+
+  const handleNavClick = (key: string) => {
+    setActiveNav(key);
+    // router.push(`/${key}`);
   };
 
   // ============================================================
@@ -182,11 +266,12 @@ export default function DashboardPage() {
       setLoggingOut(true);
 
       await api.post("/logout");
-
+      dispatch(clearPermissions());
+      dispatch(clearMenus());
       router.push("/login");
     } catch (error) {
       console.error("Logout error:", error);
-
+      
       // Even if API fails, don't keep user on dashboard
       router.push("/login");
     } finally {
@@ -237,65 +322,86 @@ export default function DashboardPage() {
   // Dashboard
   // ============================================================
 
+  const currentRoleName =
+    data?.currentRole?.find((r) => r.role_id === selectedRole)
+      ?.role_master?.role_name ?? undefined;
+
   return (
-    <main className="min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-50">
       {/* ======================================================
-          Header
+          Sidebar
       ====================================================== */}
 
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600">
-              Overview
-            </p>
+      <Sidebar
+        username={data?.user?.username}
+        ntId={data?.user?.id}
+        currentRoleName={currentRoleName}
+        selectedRoleId={selectedRole}
+        roles={data?.currentRole}
+        onRoleChange={handleRoleChange}
+        activeKey={activeNav}
+        onNavClick={handleNavClick}
+        onLogout={handleLogout}
+        loggingOut={loggingOut}
+      />
 
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">
-              Dashboard
-            </h1>
+      {/* ======================================================
+          Main content
+      ====================================================== */}
 
-            <p className="mt-1 text-sm text-slate-500">
-              Manage your application and API session.
-            </p>
-          </div>
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Header */}
+        <header className="border-b border-slate-200 bg-white">
+          <div className="flex items-center justify-between px-6 py-5">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600">
+                Overview
+              </p>
 
-          <div className="flex items-center gap-3">
-            {/* Connection */}
-            <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 shadow-sm sm:flex">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              API Connected
+              <h1 className="mt-1 text-2xl font-bold text-slate-900">
+                Dashboard
+              </h1>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Manage your application and API session.
+              </p>
             </div>
 
-            {isIdle && (
-              <IdleTimer
-                remainingTime={remainingTime}
-                totalWarningTime={totalWarningTime}
-              />
-            )}
+            <div className="flex items-center gap-3">
+              {/* Connection */}
+              <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 shadow-sm sm:flex">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                API Connected
+              </div>
 
-            {/* Logout */}
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-500 disabled:opacity-50"
-            >
-              {loggingOut ? "Logging out..." : "Logout"}
-            </button>
+              {isIdle && (
+                <IdleTimer
+                  remainingTime={remainingTime}
+                  totalWarningTime={totalWarningTime}
+                />
+              )}
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* ======================================================
-          Content
-      ====================================================== */}
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-8">
 
-      <div className="mx-auto max-w-7xl px-6 py-8">
         {/* Message */}
         {message && (
           <div className="mb-6 rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-700">
             {message}
           </div>
         )}
+
+        {/* Non-dashboard menu pages */}
+        {activeNav && activeNav !== "dashboard" ? (
+            <MenuPageRenderer
+              activeKey={activeNav}
+              permissions={data?.permissions}
+            />
+          ) : (
+        <>
 
         {/* ====================================================
             Top cards
@@ -325,6 +431,9 @@ export default function DashboardPage() {
               Call Dashboard API
             </button>
           </section>
+
+          {/* View Permissions */}
+          <ViewPermissions permissions={data?.permissions} />
 
           {/* Access Token */}
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -578,8 +687,11 @@ export default function DashboardPage() {
             </div>
           </section>
         </div>
+        </>
+        )}
+        </div>
       </div>
-    </main>
+    </div>
   );
 }
 
