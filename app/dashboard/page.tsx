@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import api from "../common";
 import IdleTimer from "@/component/IdleTimer";
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
+import policyService, { Policy } from "@/services/policyService";
 
 interface Role {
   user_role_mapping_id: string;
@@ -61,6 +62,9 @@ export default function DashboardPage() {
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
   const [message, setMessage] = useState("");
+  const [policies, setPolicies] = useState<Policy[]>([]);
+  const [policiesLoading, setPoliciesLoading] = useState(false);
+  const [pubSubLoading, setPubSubLoading] = useState(false);
 
   // ============================================================
   // Fetch dashboard
@@ -93,12 +97,70 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchPolicies = async () => {
+    try {
+      setPoliciesLoading(true);
+      const response = await policyService.getPolicies();
+      const policyList = response?.data?.data ?? [];
+      setPolicies(policyList);
+      setMessage(response?.data?.success ? "Policies loaded successfully." : "No policies available.");
+    } catch (error: any) {
+      console.error("Policies error:", error);
+      setPolicies([]);
+      setMessage(error?.response?.data?.message || "Unable to load policies.");
+    } finally {
+      setPoliciesLoading(false);
+    }
+  };
+
+  const handlePubSubTest = async () => {
+    try {
+      setPubSubLoading(true);
+      setMessage("");
+
+      const traceId =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+      const response = await api.post(
+        "/pubsub-test",
+        { source: "dashboard-ui" },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "X-Trace-Id": traceId,
+            traceid: traceId,
+          },
+        },
+      );
+
+      const result = response?.data ?? {};
+
+      setMessage(
+        result?.message ||
+          result?.data?.message ||
+          "Pub/Sub test request sent successfully.",
+      );
+    } catch (error: any) {
+      console.error("Pub/Sub test error:", error);
+      setMessage(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Unable to trigger Pub/Sub test.",
+      );
+    } finally {
+      setPubSubLoading(false);
+    }
+  };
+
   // ============================================================
   // Initial load
   // ============================================================
 
   useEffect(() => {
     fetchDashboard();
+    fetchPolicies();
   }, []);
 
   // ============================================================
@@ -267,7 +329,7 @@ export default function DashboardPage() {
             Top cards
         ==================================================== */}
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 lg:grid-cols-4">
           {/* Dashboard API */}
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-start gap-4">
@@ -316,11 +378,117 @@ export default function DashboardPage() {
               {refreshing ? "Refreshing..." : "Refresh Access Token"}
             </button>
           </section>
+
+          {/* Policies API */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                🛡
+              </div>
+
+              <div>
+                <h2 className="font-semibold text-slate-900">Policies API</h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Fetch all policies from the separate insurance service.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={fetchPolicies}
+              disabled={policiesLoading}
+              className="mt-6 rounded-lg bg-amber-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-500/20 transition hover:bg-amber-400 disabled:opacity-60"
+            >
+              {policiesLoading ? "Loading Policies..." : "Call Policies API"}
+            </button>
+          </section>
+
+          {/* Pub/Sub Test */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-cyan-100 text-cyan-600">
+                ✦
+              </div>
+
+              <div>
+                <h2 className="font-semibold text-slate-900">Pub/Sub Test</h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Trigger the standalone Pub/Sub test endpoint on port 3000.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handlePubSubTest}
+              disabled={pubSubLoading}
+              className="mt-6 rounded-lg bg-cyan-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-cyan-600/20 transition hover:bg-cyan-500 disabled:opacity-60"
+            >
+              {pubSubLoading ? "Sending..." : "POST pubsub-test"}
+            </button>
+          </section>
         </div>
 
         {/* ====================================================
             Main grid
         ==================================================== */}
+
+        {policies.length > 0 && (
+          <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900">Policies</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Latest policy records from the policy service.
+                </p>
+              </div>
+
+              <button
+                onClick={fetchPolicies}
+                className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+              >
+                Refresh Policies
+              </button>
+            </div>
+
+            <div className="mt-5 overflow-x-auto">
+              <table className="min-w-full border-separate border-spacing-y-2 text-left">
+                <thead>
+                  <tr className="text-xs uppercase tracking-wide text-slate-500">
+                    <th className="px-3 py-2 font-semibold">Policy ID</th>
+                    <th className="px-3 py-2 font-semibold">Customer</th>
+                    <th className="px-3 py-2 font-semibold">Type</th>
+                    <th className="px-3 py-2 font-semibold">Sum Insured</th>
+                    <th className="px-3 py-2 font-semibold">Premium</th>
+                    <th className="px-3 py-2 font-semibold">Status</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {policies.map((policy) => (
+                    <tr key={policy.policyId} className="rounded-xl bg-slate-50 text-sm text-slate-700">
+                      <td className="rounded-l-xl px-3 py-3 font-semibold text-slate-900">{policy.policyId}</td>
+                      <td className="px-3 py-3">{policy.customerName}</td>
+                      <td className="px-3 py-3">{policy.policyType}</td>
+                      <td className="px-3 py-3">₹{policy.sumInsured.toLocaleString("en-IN")}</td>
+                      <td className="px-3 py-3">₹{policy.premium.toLocaleString("en-IN")}</td>
+                      <td className="rounded-r-xl px-3 py-3">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          policy.status === "ACTIVE"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-rose-100 text-rose-700"
+                        }`}>
+                          {policy.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           {/* ==================================================
