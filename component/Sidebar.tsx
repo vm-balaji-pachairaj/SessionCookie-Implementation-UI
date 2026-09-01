@@ -11,6 +11,10 @@ const STATIC_LINKS = [
   { key: "profile", label: "Profile", icon: "◎" },
 ];
 
+// Extra static nav items (always present)
+const EXTRA_NAV = [
+  { key: "rbac", label: "RBAC", icon: "🔐" },
+];
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface RoleOption {
@@ -93,15 +97,10 @@ export default function Sidebar({
   }, []);
 
   // Backend menus decide what appears in the sidebar
-  const navItems = menus.map((key) => ({
+  const navMenuItems = menus.map((key) => ({
     key,
-    label:
-      MENU_CONFIG[key]?.label ??
-      key.replace(/_/g, " "),
-
-    icon:
-      MENU_CONFIG[key]?.icon ??
-      "○",
+    label: MENU_CONFIG[key]?.label ?? key.replace(/_/g, " "),
+    icon: MENU_CONFIG[key]?.icon ?? "○",
   }));
 
   const initials = username
@@ -142,7 +141,41 @@ export default function Sidebar({
       {/* Nav items */}
       <nav className="flex-1 overflow-y-auto px-2 py-4">
         <ul className="space-y-1">
-          {navItems.map((item) => {
+          {EXTRA_NAV.map((item) => {
+            const isActive = item.key === activeKey;
+
+            return (
+              <li key={item.key}>
+                <button
+                  onClick={() => onNavClick?.(item.key)}
+                  title={collapsed ? item.label : undefined}
+                  className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                    isActive
+                      ? "bg-violet-50 text-violet-700"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                >
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-base ${
+                      isActive
+                        ? "bg-violet-600 text-white"
+                        : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    {item.icon}
+                  </span>
+
+                  {!collapsed && (
+                    <span className="truncate capitalize">
+                      {item.label}
+                    </span>
+                  )}
+                </button>
+              </li>
+            );
+          })}
+
+          {navMenuItems.map((item) => {
             const isActive = item.key === activeKey;
 
             return (

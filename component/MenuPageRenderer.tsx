@@ -7,6 +7,7 @@ import DeactivateUserPage from "@/component/pages/DeactivateUserPage";
 import ActivateUserPage from "@/component/pages/ActivateUserPage";
 import ReviewPendingPage from "@/component/pages/ReviewPendingPage";
 import PageGuard from "./pages/PageGaurd";
+import RBACPage from "@/component/pages/RBACPage";
 
 interface Permission {
   permission: string;
@@ -20,6 +21,7 @@ interface Permission {
 interface MenuPageRendererProps {
   activeKey: string;
   permissions?: Permission[];
+  currentRoleId?: string | null;
 }
 
 function normalize(key: string): string {
@@ -64,9 +66,12 @@ const ACTIVATE_USER_NORM = new Set([
   "active_user",
 ]);
 
+const RBAC_NORM = new Set(["rbac"]);
+
 export default function MenuPageRenderer({
   activeKey,
   permissions,
+  currentRoleId,
 }: MenuPageRendererProps) {
   const key = normalize(activeKey);
 
@@ -136,6 +141,11 @@ export default function MenuPageRenderer({
         <ActivateUserPage permissions={permissions} />
       </PageGuard>
     );
+  }
+
+  // RBAC page
+  if (RBAC_NORM.has(key)) {
+    return <RBACPage currentRoleId={currentRoleId} />;
   }
 
   // Fallback

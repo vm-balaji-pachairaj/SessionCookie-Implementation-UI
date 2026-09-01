@@ -365,6 +365,7 @@ export default function DashboardPage() {
             <MenuPageRenderer
               activeKey={activeNav}
               permissions={data?.permissions}
+              currentRoleId={selectedRole}
             />
           ) : (
         <>
