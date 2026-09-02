@@ -228,9 +228,10 @@ export default function DashboardPage() {
     dispatch(setMenus(changeRoleRes.data.menus));
     dispatch(setPermissions(changeRoleRes.data.permissions));
 
+    // /changerole returns the single active role, not the full roles list —
+    // keep prev.currentRole (the full list) intact for the role switcher.
     setData((prev) => prev ? {
       ...prev,
-      currentRole: changeRoleRes.data.currentRole ?? prev.currentRole,
       permissions: changeRoleRes.data.permissions,
       menus: changeRoleRes.data.menus,
       landingPage: changeRoleRes.data.landingPage,
