@@ -27,7 +27,7 @@ export default function Home() {
           </div>
 
           {/* Navigation Buttons */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Login Button */}
             <Link
               href="/login"
@@ -56,6 +56,22 @@ export default function Home() {
                 </h3>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
                   Publish and monitor messages (no auth required)
+                </p>
+              </div>
+            </Link>
+
+            {/* Admin Console Button */}
+            <Link
+              href="/admin"
+              className="group flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-violet-500 dark:hover:border-violet-400 transition-all duration-200 hover:shadow-lg hover:scale-105"
+            >
+              <div className="text-4xl">🛠️</div>
+              <div className="text-center">
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-violet-600 dark:group-hover:text-violet-400">
+                  Admin Console
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  Manage roles &amp; policies (no auth required)
                 </p>
               </div>
             </Link>
