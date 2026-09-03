@@ -1,5 +1,7 @@
 "use client";
 
+import { useSelector } from "react-redux";
+import type { RootState } from "../app/store/store";
 import SearchPage from "@/component/pages/SearchPage";
 import UserPage from "@/component/pages/UserPage";
 import UpdateUserPage from "@/component/pages/UpdateUserPage";
@@ -35,9 +37,15 @@ const DASHBOARD_NORM = new Set([
   "dashboard_reviewer",
 ]);
 
+// Menu keys that should keep showing the dashboard home content instead of MenuPageRenderer.
+export function isDashboardHome(key: string): boolean {
+  return DASHBOARD_NORM.has(normalize(key));
+}
+
 const SEARCH_NORM = new Set([
   "search",
   "search_user",
+  "generic_search",
 ]);
 
 const USER_NORM = new Set([
@@ -69,6 +77,7 @@ export default function MenuPageRenderer({
   permissions,
 }: MenuPageRendererProps) {
   const key = normalize(activeKey);
+  const menus = useSelector((state: RootState) => state.menu.menus);
 
   // Search page
   if (SEARCH_NORM.has(key)) {
@@ -138,20 +147,23 @@ export default function MenuPageRenderer({
     );
   }
 
-  // Fallback
+  // No dedicated page for this menu yet — reuse the sidebar's own icon and just show the page title.
+  const menuInfo = menus.find((menu) => menu.key === activeKey);
+  const title = menuInfo?.displayName || activeKey.replace(/_/g, " ");
+
   return (
     <div className="flex flex-col items-center justify-center py-24 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-2xl text-slate-400">
-        ○
+      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100">
+        {menuInfo?.icon ? (
+          <img src={menuInfo.icon} alt="" className="h-8 w-8" />
+        ) : (
+          <span className="text-2xl text-slate-400">○</span>
+        )}
       </div>
 
       <h2 className="mt-4 text-lg font-bold text-slate-800 capitalize">
-        {activeKey.replace(/_/g, " ")}
+        {title}
       </h2>
-
-      <p className="mt-2 text-sm text-slate-400">
-        This page is under construction.
-      </p>
     </div>
   );
 }

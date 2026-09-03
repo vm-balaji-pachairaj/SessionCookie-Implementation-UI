@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import type { RootState } from '../app/store/store';
 
@@ -63,17 +63,13 @@ export default function Sidebar({
   
   const menus =  useSelector((state: RootState) => state.menu.menus)
 
-  const MENU_CONFIG = useMemo(()=>{
-    return Object.fromEntries(
-      menus.map((key: string) => [
-        key,
-        {
-          label: key.replace(/([A-Z])/g, " $1").replace(/^./, (char: string) => char.toUpperCase()),
-          icon: "○",
-        }
-      ])
-    );
-  },  [menus])
+  // Backend menus decide what appears in the sidebar
+  const navItems = menus.map((menu) => ({
+    key: menu.key,
+    label: menu.displayName || menu.key.replace(/_/g, " "),
+    icon: menu.icon || "○",
+  }));
+
 
   // Close role menu on outside click
   useEffect(() => {
@@ -91,18 +87,6 @@ export default function Sidebar({
     return () =>
       document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  // Backend menus decide what appears in the sidebar
-  const navItems = menus.map((key) => ({
-    key,
-    label:
-      MENU_CONFIG[key]?.label ??
-      key.replace(/_/g, " "),
-
-    icon:
-      MENU_CONFIG[key]?.icon ??
-      "○",
-  }));
 
   const initials = username
     ? username
@@ -163,7 +147,16 @@ export default function Sidebar({
                         : "bg-slate-100 text-slate-500"
                     }`}
                   >
-                    {item.icon}
+                    {item.icon.startsWith("/") ? (
+                      <img
+                        src={item.icon}
+                        alt=""
+                        className="h-4 w-4"
+                        style={isActive ? { filter: "brightness(0) invert(1)" } : undefined}
+                      />
+                    ) : (
+                      item.icon
+                    )}
                   </span>
 
                   {!collapsed && (

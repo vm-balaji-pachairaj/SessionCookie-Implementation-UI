@@ -1,7 +1,17 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
+export interface MenuInfo {
+  key: string;
+  lob: string;
+  parent: string;
+  displayName: string;
+  route: string;
+  icon: string;
+  order: number;
+}
+
 interface MenuState {
-  menus: string[];
+  menus: MenuInfo[];
 }
 
 const initialState: MenuState = {
@@ -12,7 +22,7 @@ const menuSlice = createSlice({
   name: "menu",
   initialState,
   reducers: {
-    setMenus: (state, action: PayloadAction<string[]>) => {
+    setMenus: (state, action: PayloadAction<MenuInfo[]>) => {
       state.menus = action.payload;
     },
 

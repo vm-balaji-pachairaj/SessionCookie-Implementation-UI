@@ -7,7 +7,7 @@ import IdleTimer from "@/component/IdleTimer";
 import { useIdleTimeout } from '@/hooks/useIdleTimeout';
 import ViewPermissions from "@/component/ViewPermissions";
 import Sidebar from "@/component/Sidebar";
-import MenuPageRenderer from "@/component/MenuPageRenderer";
+import MenuPageRenderer, { isDashboardHome } from "@/component/MenuPageRenderer";
 import { setMenus } from "../store/menuSlice";
 import { setPermissions } from "../store/permissionsSlice";
 import { useDispatch } from "react-redux";
@@ -38,6 +38,16 @@ interface Permission {
   access: string;
 }
 
+interface MenuInfo {
+  key: string;
+  lob: string;
+  parent: string;
+  displayName: string;
+  route: string;
+  icon: string;
+  order: number;
+}
+
 interface DashboardResponse {
   message: string;
   currentRole: Role[];
@@ -46,7 +56,7 @@ interface DashboardResponse {
     username: string;
   };
   permissions: Permission[];
-  menus: string[];
+  menus: MenuInfo[];
   landingPage: string[][];
   role_id: string;
 }
@@ -125,7 +135,7 @@ export default function DashboardPage() {
       if (!activeNav) {
         setActiveNav(
           response.data.landingPage?.[0]?.[2] ||
-            response.data.menus?.[0] ||
+            response.data.menus?.[0]?.key ||
             ""
         );
       }
@@ -159,13 +169,13 @@ export default function DashboardPage() {
           if (prev) return prev;
 
           const currentMenu = response.data.menus?.find(
-            (menu) => `/${menu}` === pathname
+            (menu) => menu.route === pathname || `/${menu.key}` === pathname
           );
 
           return (
-            currentMenu ||
+            currentMenu?.key ||
             response.data.landingPage?.[0]?.[2] ||
-            response.data.menus?.[0] ||
+            response.data.menus?.[0]?.key ||
             ""
           );
         });
@@ -241,7 +251,7 @@ export default function DashboardPage() {
 
     const landingKey =
       changeRoleRes.data.landingPage?.[0]?.[2] ??
-      changeRoleRes.data.menus?.[0] ??
+      changeRoleRes.data.menus?.[0]?.key ??
       "";
 
     setActiveNav(landingKey);
@@ -396,7 +406,7 @@ export default function DashboardPage() {
         )}
 
         {/* Non-dashboard menu pages */}
-        {activeNav && activeNav !== "dashboard" ? (
+        {activeNav && !isDashboardHome(activeNav) ? (
             <MenuPageRenderer
               activeKey={activeNav}
               permissions={data?.permissions}

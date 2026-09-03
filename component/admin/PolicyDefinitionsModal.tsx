@@ -1,17 +1,101 @@
 "use client";
 
-interface PolicyDefinition {
-  lob: string | null;
-  page: string | null;
-  module: string | null;
-  section: string | null;
-  access: string | null;
+export interface PolicyDefinition {
+  ptype: "p" | "p2";
+  // p-type fields
+  lob?: string | null;
+  page?: string | null;
+  module?: string | null;
+  section?: string | null;
+  access?: string | null;
+  // p2-type fields
+  parent?: string | null;
+  displayName?: string | null;
+  route?: string | null;
+  icon?: string | null;
+  order?: number | null;
 }
 
 interface PolicyDefinitionsModalProps {
   title: string;
   definitions: PolicyDefinition[];
   onClose: () => void;
+}
+
+/**
+ * Renders one policy definition, choosing its fields based on `def.ptype`
+ * so the same modal works for both 'p' (permission) and 'p2' (menu) rows.
+ */
+function DefinitionFields({ def }: { def: PolicyDefinition }) {
+  if (def.ptype === "p2") {
+    return (
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
+        <div>
+          <dt className="text-xs text-slate-400">LOB</dt>
+          <dd className="font-medium text-slate-800 uppercase">
+            {def.lob || "—"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-slate-400">Parent</dt>
+          <dd className="font-medium text-slate-800">
+            {def.parent || "—"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-slate-400">Display Name</dt>
+          <dd className="font-medium text-slate-800">
+            {def.displayName || "—"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-slate-400">Route</dt>
+          <dd className="font-medium text-slate-800">
+            {def.route || "—"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-xs text-slate-400">Order</dt>
+          <dd>
+            <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+              {def.order ?? "—"}
+            </span>
+          </dd>
+        </div>
+      </dl>
+    );
+  }
+
+  return (
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
+      <div>
+        <dt className="text-xs text-slate-400">LOB</dt>
+        <dd className="font-medium text-slate-800 uppercase">
+          {def.lob || "—"}
+        </dd>
+      </div>
+      <div>
+        <dt className="text-xs text-slate-400">Page</dt>
+        <dd className="font-medium text-slate-800">{def.page || "—"}</dd>
+      </div>
+      <div>
+        <dt className="text-xs text-slate-400">Module</dt>
+        <dd className="font-medium text-slate-800">{def.module || "—"}</dd>
+      </div>
+      <div>
+        <dt className="text-xs text-slate-400">Section</dt>
+        <dd className="font-medium text-slate-800">{def.section || "—"}</dd>
+      </div>
+      <div>
+        <dt className="text-xs text-slate-400">Access</dt>
+        <dd>
+          <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+            {def.access || "—"}
+          </span>
+        </dd>
+      </div>
+    </dl>
+  );
 }
 
 export default function PolicyDefinitionsModal({
@@ -59,43 +143,19 @@ export default function PolicyDefinitionsModal({
                   key={idx}
                   className="rounded-xl border border-slate-200 p-4"
                 >
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  <p className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
                     Definition {idx + 1}
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        def.ptype === "p2"
+                          ? "bg-sky-50 text-sky-700"
+                          : "bg-violet-50 text-violet-700"
+                      }`}
+                    >
+                      {def.ptype.toUpperCase()}
+                    </span>
                   </p>
-                  <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
-                    <div>
-                      <dt className="text-xs text-slate-400">LOB</dt>
-                      <dd className="font-medium text-slate-800 uppercase">
-                        {def.lob || "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-slate-400">Page</dt>
-                      <dd className="font-medium text-slate-800">
-                        {def.page || "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-slate-400">Module</dt>
-                      <dd className="font-medium text-slate-800">
-                        {def.module || "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-slate-400">Section</dt>
-                      <dd className="font-medium text-slate-800">
-                        {def.section || "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-slate-400">Access</dt>
-                      <dd>
-                        <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-                          {def.access || "—"}
-                        </span>
-                      </dd>
-                    </div>
-                  </dl>
+                  <DefinitionFields def={def} />
                 </div>
               ))}
             </div>

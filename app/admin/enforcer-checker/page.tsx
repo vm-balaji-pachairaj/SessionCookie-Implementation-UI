@@ -6,42 +6,55 @@ import axios from "axios";
 
 const ADMIN_API = "http://localhost:5000/api/admin";
 
+type Ptype = "p" | "p2";
+
 interface RoleSummary {
   role: string;
   permissionCount: number;
 }
 
 interface PolicyDefinition {
-  lob: string | null;
-  page: string | null;
-  module: string | null;
-  section: string | null;
-  access: string | null;
+  ptype: Ptype;
+  lob?: string | null;
+  page?: string | null;
+  module?: string | null;
+  section?: string | null;
+  access?: string | null;
+  parent?: string | null;
+  displayName?: string | null;
+  route?: string | null;
 }
 
 interface PolicySummary {
   permission: string;
+  ptype: Ptype;
   definitions: PolicyDefinition[];
 }
 
 interface PermissionEntry {
   key: string;
+  ptype: Ptype;
   permission: string;
   lob: string;
   page: string;
   module: string;
   section: string;
   access: string;
+  parent: string;
+  displayName: string;
+  route: string;
 }
 
 interface CheckResult {
   allowed: boolean;
+  ptype: Ptype;
   role: string;
-  lob: string;
-  page: string;
-  module: string;
-  section: string;
-  access: string;
+  lob?: string;
+  page?: string;
+  module?: string;
+  section?: string;
+  access?: string;
+  key?: string;
 }
 
 function flattenPolicies(policies: PolicySummary[]): PermissionEntry[] {
@@ -50,13 +63,17 @@ function flattenPolicies(policies: PolicySummary[]): PermissionEntry[] {
   policies.forEach((policy) => {
     policy.definitions.forEach((def, idx) => {
       entries.push({
-        key: `${policy.permission}#${idx}`,
+        key: `${policy.ptype}:${policy.permission}#${idx}`,
+        ptype: policy.ptype,
         permission: policy.permission,
         lob: def.lob ?? "",
         page: def.page ?? "",
         module: def.module ?? "",
         section: def.section ?? "",
         access: def.access ?? "",
+        parent: def.parent ?? "",
+        displayName: def.displayName ?? "",
+        route: def.route ?? "",
       });
     });
   });
@@ -74,6 +91,7 @@ export default function EnforcerCheckerPage() {
 
   const [roleSearch, setRoleSearch] = useState("");
   const [permissionSearch, setPermissionSearch] = useState("");
+  const [ptypeFilter, setPtypeFilter] = useState<Ptype>("p");
 
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [selectedEntry, setSelectedEntry] = useState<PermissionEntry | null>(
@@ -116,11 +134,20 @@ export default function EnforcerCheckerPage() {
 
   const filteredEntries = useMemo(
     () =>
-      permissionEntries.filter((e) =>
-        e.permission.toLowerCase().includes(permissionSearch.toLowerCase())
-      ),
-    [permissionEntries, permissionSearch]
+      permissionEntries
+        .filter((e) => e.ptype === ptypeFilter)
+        .filter((e) =>
+          e.permission.toLowerCase().includes(permissionSearch.toLowerCase())
+        ),
+    [permissionEntries, permissionSearch, ptypeFilter]
   );
+
+  // Switching P/P2 tabs invalidates a selection made under the other type.
+  const handlePtypeFilterChange = (t: Ptype) => {
+    setPtypeFilter(t);
+    setSelectedEntry(null);
+    setResult(null);
+  };
 
   const handleCheck = async () => {
     if (!selectedRole || !selectedEntry) return;
@@ -128,16 +155,27 @@ export default function EnforcerCheckerPage() {
       setChecking(true);
       setCheckError("");
       setResult(null);
+
+      const body =
+        selectedEntry.ptype === "p2"
+          ? {
+              ptype: "p2" as const,
+              role: selectedRole,
+              key: selectedEntry.permission,
+            }
+          : {
+              ptype: "p" as const,
+              role: selectedRole,
+              lob: selectedEntry.lob,
+              page: selectedEntry.page,
+              module: selectedEntry.module,
+              section: selectedEntry.section,
+              access: selectedEntry.access,
+            };
+
       const res = await axios.post<CheckResult>(
         `${ADMIN_API}/enforcer/check`,
-        {
-          role: selectedRole,
-          lob: selectedEntry.lob,
-          page: selectedEntry.page,
-          module: selectedEntry.module,
-          section: selectedEntry.section,
-          access: selectedEntry.access,
-        }
+        body
       );
       setResult(res.data);
     } catch (err) {
@@ -161,8 +199,8 @@ export default function EnforcerCheckerPage() {
               Enforcer Checker
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Pick a role and a permission, then check whether the Casbin
-              enforcer allows it.
+              Pick a role and a policy (P permission or P2 menu), then check
+              whether the Casbin enforcer allows it.
             </p>
           </div>
           <Link
@@ -178,6 +216,23 @@ export default function EnforcerCheckerPage() {
             {error}
           </div>
         )}
+
+        {/* Ptype tabs */}
+        <div className="mb-6 inline-flex items-center gap-1 rounded-xl bg-slate-200/60 p-1">
+          {(["p", "p2"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => handlePtypeFilterChange(t)}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                ptypeFilter === t
+                  ? "bg-slate-900 text-white shadow"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              {t === "p" ? "P (Permissions)" : "P2 (Menus)"}
+            </button>
+          ))}
+        </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Step 1: role */}
@@ -229,30 +284,34 @@ export default function EnforcerCheckerPage() {
             </div>
           </section>
 
-          {/* Step 2: permission */}
+          {/* Step 2: permission / menu */}
           <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 px-6 py-4">
               <h2 className="flex items-center font-semibold text-slate-900">
                 <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-xs text-white">
                   2
                 </span>
-                Select Permission
+                Select {ptypeFilter === "p2" ? "Menu" : "Permission"}
               </h2>
               <input
                 value={permissionSearch}
                 onChange={(e) => setPermissionSearch(e.target.value)}
-                placeholder="Search permissions..."
+                placeholder={
+                  ptypeFilter === "p2"
+                    ? "Search menus..."
+                    : "Search permissions..."
+                }
                 className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               />
             </div>
             <div className="max-h-96 overflow-y-auto px-4 py-3">
               {loading ? (
                 <p className="py-8 text-center text-sm text-slate-500">
-                  Loading permissions…
+                  Loading {ptypeFilter === "p2" ? "menus" : "permissions"}…
                 </p>
               ) : filteredEntries.length === 0 ? (
                 <p className="py-8 text-center text-sm text-slate-500">
-                  No permissions found.
+                  No {ptypeFilter === "p2" ? "menus" : "permissions"} found.
                 </p>
               ) : (
                 <ul className="space-y-1.5">
@@ -277,10 +336,19 @@ export default function EnforcerCheckerPage() {
                             {entry.permission}
                           </span>
                           <span className="mt-1 block truncate text-[11px] text-slate-400">
-                            {[entry.lob, entry.page, entry.module, entry.section]
-                              .filter(Boolean)
-                              .join(" / ")}
-                            {entry.access ? ` · ${entry.access}` : ""}
+                            {entry.ptype === "p2"
+                              ? [entry.lob, entry.parent, entry.displayName]
+                                  .filter(Boolean)
+                                  .join(" / ")
+                              : [
+                                  entry.lob,
+                                  entry.page,
+                                  entry.module,
+                                  entry.section,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" / ") +
+                                (entry.access ? ` · ${entry.access}` : "")}
                           </span>
                         </div>
                         {selectedEntry?.key === entry.key && (
@@ -308,7 +376,7 @@ export default function EnforcerCheckerPage() {
                 </span>
               </p>
               <p className="mt-1">
-                Permission:{" "}
+                {ptypeFilter === "p2" ? "Menu" : "Permission"}:{" "}
                 <span className="font-mono text-xs font-semibold text-slate-900">
                   {selectedEntry?.permission ?? "—"}
                 </span>
@@ -350,10 +418,19 @@ export default function EnforcerCheckerPage() {
                     {result.allowed ? "Allowed" : "Denied"}
                   </p>
                   <p className="text-sm text-slate-600">
-                    enforce(&ldquo;{result.role}&rdquo;, &ldquo;{result.lob}
-                    &rdquo;, &ldquo;{result.page}&rdquo;, &ldquo;
-                    {result.module}&rdquo;, &ldquo;{result.section}&rdquo;,
-                    &ldquo;{result.access}&rdquo;)
+                    {result.ptype === "p2" ? (
+                      <>
+                        enforceP2(&ldquo;{result.role}&rdquo;, &ldquo;
+                        {result.key}&rdquo;)
+                      </>
+                    ) : (
+                      <>
+                        enforce(&ldquo;{result.role}&rdquo;, &ldquo;
+                        {result.lob}&rdquo;, &ldquo;{result.page}&rdquo;,
+                        &ldquo;{result.module}&rdquo;, &ldquo;{result.section}
+                        &rdquo;, &ldquo;{result.access}&rdquo;)
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -365,36 +442,47 @@ export default function EnforcerCheckerPage() {
                     {result.role}
                   </dd>
                 </div>
-                <div>
-                  <dt className="text-xs text-slate-400">LOB</dt>
-                  <dd className="font-medium text-slate-800 uppercase">
-                    {result.lob || "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-400">Page</dt>
-                  <dd className="font-medium text-slate-800">
-                    {result.page || "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-400">Module</dt>
-                  <dd className="font-medium text-slate-800">
-                    {result.module || "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-400">Section</dt>
-                  <dd className="font-medium text-slate-800">
-                    {result.section || "—"}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-400">Access</dt>
-                  <dd className="font-medium text-slate-800">
-                    {result.access || "—"}
-                  </dd>
-                </div>
+                {result.ptype === "p2" ? (
+                  <div>
+                    <dt className="text-xs text-slate-400">Menu Key</dt>
+                    <dd className="font-medium text-slate-800">
+                      {result.key || "—"}
+                    </dd>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <dt className="text-xs text-slate-400">LOB</dt>
+                      <dd className="font-medium text-slate-800 uppercase">
+                        {result.lob || "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-slate-400">Page</dt>
+                      <dd className="font-medium text-slate-800">
+                        {result.page || "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-slate-400">Module</dt>
+                      <dd className="font-medium text-slate-800">
+                        {result.module || "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-slate-400">Section</dt>
+                      <dd className="font-medium text-slate-800">
+                        {result.section || "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-slate-400">Access</dt>
+                      <dd className="font-medium text-slate-800">
+                        {result.access || "—"}
+                      </dd>
+                    </div>
+                  </>
+                )}
               </dl>
             </div>
           )}
@@ -403,3 +491,4 @@ export default function EnforcerCheckerPage() {
     </div>
   );
 }
+

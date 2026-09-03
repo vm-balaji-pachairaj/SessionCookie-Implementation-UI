@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import PolicyDefinitionsModal from "@/component/admin/PolicyDefinitionsModal";
+import PolicyDefinitionsModal, {
+  PolicyDefinition,
+} from "@/component/admin/PolicyDefinitionsModal";
 
 const ADMIN_API = "http://localhost:5000/api/admin";
 
@@ -13,20 +15,14 @@ interface RoleSummary {
   permissionCount: number;
 }
 
-interface PolicyDefinition {
-  lob: string | null;
-  page: string | null;
-  module: string | null;
-  section: string | null;
-  access: string | null;
-}
-
 interface PolicySummary {
   permission: string;
+  ptype: "p" | "p2";
   definitions: PolicyDefinition[];
 }
 
 type Tab = "roles" | "policies";
+type PtypeFilter = "all" | "p" | "p2";
 
 export default function AdminConsolePage() {
   const router = useRouter();
@@ -39,6 +35,8 @@ export default function AdminConsolePage() {
 
   const [roleSearch, setRoleSearch] = useState("");
   const [policySearch, setPolicySearch] = useState("");
+  const [policyPtypeFilter, setPolicyPtypeFilter] =
+    useState<PtypeFilter>("all");
 
   const [activePolicy, setActivePolicy] = useState<PolicySummary | null>(
     null
@@ -76,10 +74,14 @@ export default function AdminConsolePage() {
 
   const filteredPolicies = useMemo(
     () =>
-      policies.filter((p) =>
-        p.permission.toLowerCase().includes(policySearch.toLowerCase())
-      ),
-    [policies, policySearch]
+      policies
+        .filter(
+          (p) => policyPtypeFilter === "all" || p.ptype === policyPtypeFilter
+        )
+        .filter((p) =>
+          p.permission.toLowerCase().includes(policySearch.toLowerCase())
+        ),
+    [policies, policySearch, policyPtypeFilter]
   );
 
   return (
@@ -242,15 +244,33 @@ export default function AdminConsolePage() {
                 <div>
                   <h2 className="font-semibold text-slate-900">Policies</h2>
                   <p className="mt-0.5 text-xs text-slate-500">
-                    List of policies available in the application.
+                    List of policies (P) and menus (P2) available in the
+                    application.
                   </p>
                 </div>
-                <input
-                  value={policySearch}
-                  onChange={(e) => setPolicySearch(e.target.value)}
-                  placeholder="Search by policy name..."
-                  className="w-64 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-                />
+                <div className="flex items-center gap-3">
+                  <div className="inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1">
+                    {(["all", "p", "p2"] as const).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setPolicyPtypeFilter(t)}
+                        className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+                          policyPtypeFilter === t
+                            ? "bg-white text-slate-900 shadow-sm"
+                            : "text-slate-500 hover:text-slate-800"
+                        }`}
+                      >
+                        {t === "all" ? "All" : t.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    value={policySearch}
+                    onChange={(e) => setPolicySearch(e.target.value)}
+                    placeholder="Search by policy name..."
+                    className="w-64 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  />
+                </div>
               </div>
 
               {loading ? (
@@ -265,19 +285,35 @@ export default function AdminConsolePage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50">
-                      {["Policy", "Definitions", "Actions"].map((h) => (
-                        <th
-                          key={h}
-                          className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400"
-                        >
-                          {h}
-                        </th>
-                      ))}
+                      {["Type", "Policy", "Definitions", "Actions"].map(
+                        (h) => (
+                          <th
+                            key={h}
+                            className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400"
+                          >
+                            {h}
+                          </th>
+                        )
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredPolicies.map((p) => (
-                      <tr key={p.permission} className="hover:bg-slate-50">
+                      <tr
+                        key={`${p.ptype}:${p.permission}`}
+                        className="hover:bg-slate-50"
+                      >
+                        <td className="px-6 py-4">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              p.ptype === "p2"
+                                ? "bg-sky-50 text-sky-700"
+                                : "bg-violet-50 text-violet-700"
+                            }`}
+                          >
+                            {p.ptype.toUpperCase()}
+                          </span>
+                        </td>
                         <td className="px-6 py-4 max-w-[320px] truncate font-mono text-xs text-slate-700">
                           {p.permission}
                         </td>

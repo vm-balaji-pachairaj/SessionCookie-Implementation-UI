@@ -6,15 +6,20 @@ import axios from "axios";
 const ADMIN_API = "http://localhost:5000/api/admin";
 
 interface PolicyDefinition {
-  lob: string | null;
-  page: string | null;
-  module: string | null;
-  section: string | null;
-  access: string | null;
+  ptype: "p" | "p2";
+  lob?: string | null;
+  page?: string | null;
+  module?: string | null;
+  section?: string | null;
+  access?: string | null;
+  parent?: string | null;
+  displayName?: string | null;
+  route?: string | null;
 }
 
 interface PolicySummary {
   permission: string;
+  ptype: "p" | "p2";
   definitions: PolicyDefinition[];
 }
 
@@ -30,6 +35,12 @@ function describeDefinitions(policy: PolicySummary): string {
     return `${policy.definitions.length} definitions available`;
   }
   const [d] = policy.definitions;
+  if (d.ptype === "p2") {
+    return (
+      [d.lob, d.parent, d.displayName].filter(Boolean).join(" / ") +
+      (d.route ? ` · ${d.route}` : "")
+    );
+  }
   return (
     [d.lob, d.page, d.module, d.section].filter(Boolean).join(" / ") +
     (d.access ? ` · ${d.access}` : "")
@@ -45,6 +56,7 @@ export default function AddPolicyModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [ptypeFilter, setPtypeFilter] = useState<"all" | "p" | "p2">("all");
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -70,10 +82,12 @@ export default function AddPolicyModal({
 
   const filtered = useMemo(
     () =>
-      available.filter((p) =>
-        p.permission.toLowerCase().includes(search.toLowerCase())
-      ),
-    [available, search]
+      available
+        .filter((p) => ptypeFilter === "all" || p.ptype === ptypeFilter)
+        .filter((p) =>
+          p.permission.toLowerCase().includes(search.toLowerCase())
+        ),
+    [available, search, ptypeFilter]
   );
 
   const handleSave = async () => {
@@ -119,14 +133,29 @@ export default function AddPolicyModal({
           </button>
         </div>
 
-        {/* Search */}
-        <div className="px-6 pt-4">
+        {/* Search + type filter */}
+        <div className="space-y-2 px-6 pt-4">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search permissions..."
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
           />
+          <div className="inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1">
+            {(["all", "p", "p2"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setPtypeFilter(t)}
+                className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+                  ptypeFilter === t
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                {t === "all" ? "All" : t.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
 
         {error && (
@@ -148,7 +177,7 @@ export default function AddPolicyModal({
           ) : (
             <ul className="space-y-1.5">
               {filtered.map((policy) => (
-                <li key={policy.permission}>
+                <li key={`${policy.ptype}:${policy.permission}`}>
                   <button
                     onClick={() => setSelected(policy.permission)}
                     className={`flex w-full items-start justify-between gap-3 rounded-lg border px-3 py-2.5 text-left transition ${
@@ -158,14 +187,25 @@ export default function AddPolicyModal({
                     }`}
                   >
                     <div className="min-w-0">
-                      <span
-                        className={`block truncate font-mono text-xs ${
-                          selected === policy.permission
-                            ? "text-violet-700"
-                            : "text-slate-700"
-                        }`}
-                      >
-                        {policy.permission}
+                      <span className="flex items-center gap-2">
+                        <span
+                          className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                            policy.ptype === "p2"
+                              ? "bg-sky-50 text-sky-700"
+                              : "bg-violet-50 text-violet-700"
+                          }`}
+                        >
+                          {policy.ptype.toUpperCase()}
+                        </span>
+                        <span
+                          className={`block truncate font-mono text-xs ${
+                            selected === policy.permission
+                              ? "text-violet-700"
+                              : "text-slate-700"
+                          }`}
+                        >
+                          {policy.permission}
+                        </span>
                       </span>
                       <span className="mt-1 block truncate text-[11px] text-slate-400">
                         {describeDefinitions(policy)}
