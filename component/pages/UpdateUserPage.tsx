@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import UserForm, { type UserFormData } from "@/component/UserForm";
-import { hasPermission, type Permission } from "@/lib/permissions";
+import { hasPermission, type Permission, type FieldPermission } from "@/lib/permissions";
 
 const PERM_UPDATE = "userManagement-updateUser";
 
 interface UpdateUserPageProps {
   permissions?: Permission[];
+  fieldPermissions?: FieldPermission[];
 }
 
 interface UserResponse {
@@ -26,6 +27,7 @@ interface UserResponse {
 
 export default function UpdateUserPage({
   permissions = [],
+  fieldPermissions = [],
 }: UpdateUserPageProps) {
   const router = useRouter();
 
@@ -166,6 +168,7 @@ export default function UpdateUserPage({
         <UserForm
           mode="update"
           permissions={permissions}
+          fieldPermissions={fieldPermissions}
           initialData={loadedUser ?? {}}
           userId={loadedUserId ?? undefined}
           onSuccess={() => {

@@ -9,6 +9,7 @@ import UserForm, {
 import {
   hasPermission,
   type Permission,
+  type FieldPermission,
 } from "@/lib/permissions";
 
 const PERM_ACTIVATE =
@@ -33,10 +34,12 @@ interface UserResponse {
 
 interface ActiveUserPageProps {
   permissions?: Permission[];
+  fieldPermissions?: FieldPermission[];
 }
 
 export default function ActiveUserPage({
   permissions = [],
+  fieldPermissions = [],
 }: ActiveUserPageProps) {
   const router = useRouter();
 
@@ -220,6 +223,7 @@ export default function ActiveUserPage({
         <UserForm
           mode="activate"
           permissions={permissions}
+          fieldPermissions={fieldPermissions}
           initialData={loadedUser}
           userId={
             loadedUserId ??

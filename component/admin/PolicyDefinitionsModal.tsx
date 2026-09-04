@@ -1,13 +1,15 @@
 "use client";
 
 export interface PolicyDefinition {
-  ptype: "p" | "p2";
-  // p-type fields
+  ptype: "p" | "p2" | "p3";
+  // p-type fields (also reused by p3)
   lob?: string | null;
   page?: string | null;
   module?: string | null;
   section?: string | null;
   access?: string | null;
+  // p3-type field
+  field?: string | null;
   // p2-type fields
   parent?: string | null;
   displayName?: string | null;
@@ -86,6 +88,12 @@ function DefinitionFields({ def }: { def: PolicyDefinition }) {
         <dt className="text-xs text-slate-400">Section</dt>
         <dd className="font-medium text-slate-800">{def.section || "—"}</dd>
       </div>
+      {def.ptype === "p3" && (
+        <div>
+          <dt className="text-xs text-slate-400">Field</dt>
+          <dd className="font-medium text-slate-800">{def.field || "—"}</dd>
+        </div>
+      )}
       <div>
         <dt className="text-xs text-slate-400">Access</dt>
         <dd>
@@ -149,7 +157,9 @@ export default function PolicyDefinitionsModal({
                       className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                         def.ptype === "p2"
                           ? "bg-sky-50 text-sky-700"
-                          : "bg-violet-50 text-violet-700"
+                          : def.ptype === "p3"
+                            ? "bg-amber-50 text-amber-700"
+                            : "bg-violet-50 text-violet-700"
                       }`}
                     >
                       {def.ptype.toUpperCase()}

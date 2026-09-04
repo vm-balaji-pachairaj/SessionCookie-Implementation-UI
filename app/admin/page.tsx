@@ -17,12 +17,12 @@ interface RoleSummary {
 
 interface PolicySummary {
   permission: string;
-  ptype: "p" | "p2";
+  ptype: "p" | "p2" | "p3";
   definitions: PolicyDefinition[];
 }
 
 type Tab = "roles" | "policies";
-type PtypeFilter = "all" | "p" | "p2";
+type PtypeFilter = "all" | "p" | "p2" | "p3";
 
 export default function AdminConsolePage() {
   const router = useRouter();
@@ -244,13 +244,13 @@ export default function AdminConsolePage() {
                 <div>
                   <h2 className="font-semibold text-slate-900">Policies</h2>
                   <p className="mt-0.5 text-xs text-slate-500">
-                    List of policies (P) and menus (P2) available in the
-                    application.
+                    List of policies (P), menus (P2), and field-level access
+                    (P3) available in the application.
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1">
-                    {(["all", "p", "p2"] as const).map((t) => (
+                    {(["all", "p", "p2", "p3"] as const).map((t) => (
                       <button
                         key={t}
                         onClick={() => setPolicyPtypeFilter(t)}
@@ -308,7 +308,9 @@ export default function AdminConsolePage() {
                             className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                               p.ptype === "p2"
                                 ? "bg-sky-50 text-sky-700"
-                                : "bg-violet-50 text-violet-700"
+                                : p.ptype === "p3"
+                                  ? "bg-amber-50 text-amber-700"
+                                  : "bg-violet-50 text-violet-700"
                             }`}
                           >
                             {p.ptype.toUpperCase()}

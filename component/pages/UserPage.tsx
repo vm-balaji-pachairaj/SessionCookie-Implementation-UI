@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import UserForm from "@/component/UserForm";
+import UserList from "@/component/UserList";
 import {
   hasPermission,
   type Permission,
+  type FieldPermission,
 } from "@/lib/permissions";
 
 const PERM_CREATE =
@@ -20,14 +22,19 @@ const PERM_DEACTIVATE =
 const PERM_ACTIVATE =
   "userManagement-activateUser";
 
+const PERM_LIST =
+  "userManagement-listUsers";
+
 interface UserPageProps {
   permissions?: Permission[];
+  fieldPermissions?: FieldPermission[];
 }
 
 type PageView = "home" | "create";
 
 export default function UserPage({
   permissions = [],
+  fieldPermissions = [],
 }: UserPageProps) {
   const router = useRouter();
 
@@ -54,6 +61,8 @@ export default function UserPage({
     PERM_ACTIVATE,
   );
 
+  const canList = hasPermission(permissions, PERM_LIST);
+
   function reset() {
     setView("home");
   }
@@ -68,6 +77,7 @@ export default function UserPage({
         <UserForm
           mode="create"
           permissions={permissions}
+          fieldPermissions={fieldPermissions}
           onSuccess={reset}
           onCancel={reset}
         />
@@ -96,7 +106,8 @@ export default function UserPage({
       {!canCreate &&
       !canUpdate &&
       !canDeactivate &&
-      !canActivate ? (
+      !canActivate &&
+      !canList ? (
         <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-10 text-center text-sm text-red-500">
           You do not have permission to manage users.
         </div>
@@ -168,6 +179,8 @@ export default function UserPage({
 
         </div>
       )}
+
+      {canList && <UserList fieldPermissions={fieldPermissions} />}
     </div>
   );
 }

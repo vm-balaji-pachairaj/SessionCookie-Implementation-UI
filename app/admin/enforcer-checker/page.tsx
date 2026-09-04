@@ -6,7 +6,7 @@ import axios from "axios";
 
 const ADMIN_API = "http://localhost:5000/api/admin";
 
-type Ptype = "p" | "p2";
+type Ptype = "p" | "p2" | "p3";
 
 interface RoleSummary {
   role: string;
@@ -20,6 +20,7 @@ interface PolicyDefinition {
   module?: string | null;
   section?: string | null;
   access?: string | null;
+  field?: string | null;
   parent?: string | null;
   displayName?: string | null;
   route?: string | null;
@@ -40,6 +41,7 @@ interface PermissionEntry {
   module: string;
   section: string;
   access: string;
+  field: string;
   parent: string;
   displayName: string;
   route: string;
@@ -53,6 +55,7 @@ interface CheckResult {
   page?: string;
   module?: string;
   section?: string;
+  field?: string;
   access?: string;
   key?: string;
 }
@@ -71,6 +74,7 @@ function flattenPolicies(policies: PolicySummary[]): PermissionEntry[] {
         module: def.module ?? "",
         section: def.section ?? "",
         access: def.access ?? "",
+        field: def.field ?? "",
         parent: def.parent ?? "",
         displayName: def.displayName ?? "",
         route: def.route ?? "",
@@ -163,7 +167,18 @@ export default function EnforcerCheckerPage() {
               role: selectedRole,
               key: selectedEntry.permission,
             }
-          : {
+          : selectedEntry.ptype === "p3"
+            ? {
+                ptype: "p3" as const,
+                role: selectedRole,
+                lob: selectedEntry.lob,
+                page: selectedEntry.page,
+                module: selectedEntry.module,
+                section: selectedEntry.section,
+                field: selectedEntry.field,
+                access: selectedEntry.access,
+              }
+            : {
               ptype: "p" as const,
               role: selectedRole,
               lob: selectedEntry.lob,
@@ -219,7 +234,7 @@ export default function EnforcerCheckerPage() {
 
         {/* Ptype tabs */}
         <div className="mb-6 inline-flex items-center gap-1 rounded-xl bg-slate-200/60 p-1">
-          {(["p", "p2"] as const).map((t) => (
+          {(["p", "p2", "p3"] as const).map((t) => (
             <button
               key={t}
               onClick={() => handlePtypeFilterChange(t)}
@@ -229,7 +244,11 @@ export default function EnforcerCheckerPage() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              {t === "p" ? "P (Permissions)" : "P2 (Menus)"}
+              {t === "p"
+                ? "P (Permissions)"
+                : t === "p2"
+                  ? "P2 (Menus)"
+                  : "P3 (Fields)"}
             </button>
           ))}
         </div>
@@ -340,7 +359,18 @@ export default function EnforcerCheckerPage() {
                               ? [entry.lob, entry.parent, entry.displayName]
                                   .filter(Boolean)
                                   .join(" / ")
-                              : [
+                              : entry.ptype === "p3"
+                                ? [
+                                    entry.lob,
+                                    entry.page,
+                                    entry.module,
+                                    entry.section,
+                                    entry.field,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" / ") +
+                                  (entry.access ? ` · ${entry.access}` : "")
+                                : [
                                   entry.lob,
                                   entry.page,
                                   entry.module,
@@ -423,6 +453,14 @@ export default function EnforcerCheckerPage() {
                         enforceP2(&ldquo;{result.role}&rdquo;, &ldquo;
                         {result.key}&rdquo;)
                       </>
+                    ) : result.ptype === "p3" ? (
+                      <>
+                        enforceField(&ldquo;{result.role}&rdquo;, &ldquo;
+                        {result.lob}&rdquo;, &ldquo;{result.page}&rdquo;,
+                        &ldquo;{result.module}&rdquo;, &ldquo;{result.section}
+                        &rdquo;, &ldquo;{result.field}&rdquo;, &ldquo;
+                        {result.access}&rdquo;)
+                      </>
                     ) : (
                       <>
                         enforce(&ldquo;{result.role}&rdquo;, &ldquo;
@@ -475,6 +513,14 @@ export default function EnforcerCheckerPage() {
                         {result.section || "—"}
                       </dd>
                     </div>
+                    {result.ptype === "p3" && (
+                      <div>
+                        <dt className="text-xs text-slate-400">Field</dt>
+                        <dd className="font-medium text-slate-800">
+                          {result.field || "—"}
+                        </dd>
+                      </div>
+                    )}
                     <div>
                       <dt className="text-xs text-slate-400">Access</dt>
                       <dd className="font-medium text-slate-800">

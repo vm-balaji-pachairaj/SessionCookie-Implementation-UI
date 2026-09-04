@@ -19,9 +19,20 @@ interface Permission {
   access: string;
 }
 
+interface FieldPermission {
+  permission: string;
+  lob: string;
+  page: string;
+  module: string;
+  section: string;
+  field: string;
+  access: string;
+}
+
 interface MenuPageRendererProps {
   activeKey: string;
   permissions?: Permission[];
+  fieldPermissions?: FieldPermission[];
 }
 
 function normalize(key: string): string {
@@ -75,6 +86,7 @@ const ACTIVATE_USER_NORM = new Set([
 export default function MenuPageRenderer({
   activeKey,
   permissions,
+  fieldPermissions,
 }: MenuPageRendererProps) {
   const key = normalize(activeKey);
   const menus = useSelector((state: RootState) => state.menu.menus);
@@ -97,6 +109,7 @@ export default function MenuPageRenderer({
       >
         <UserPage
           permissions={permissions}
+          fieldPermissions={fieldPermissions}
         />
       </PageGuard>
     );
@@ -118,7 +131,7 @@ export default function MenuPageRenderer({
         permissions={permissions ?? []}
         requiredPermission="userManagement-page"
       >
-        <UpdateUserPage permissions={permissions} />
+        <UpdateUserPage permissions={permissions} fieldPermissions={fieldPermissions} />
       </PageGuard>
     );
   }
@@ -130,7 +143,7 @@ export default function MenuPageRenderer({
         permissions={permissions ?? []}
         requiredPermission="userManagement-page"
       >
-        <DeactivateUserPage permissions={permissions} />
+        <DeactivateUserPage permissions={permissions} fieldPermissions={fieldPermissions} />
       </PageGuard>
     );
   }
@@ -142,7 +155,7 @@ export default function MenuPageRenderer({
         permissions={permissions ?? []}
         requiredPermission="userManagement-page"
       >
-        <ActivateUserPage permissions={permissions} />
+        <ActivateUserPage permissions={permissions} fieldPermissions={fieldPermissions} />
       </PageGuard>
     );
   }

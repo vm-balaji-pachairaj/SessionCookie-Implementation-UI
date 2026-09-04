@@ -6,12 +6,13 @@ import axios from "axios";
 const ADMIN_API = "http://localhost:5000/api/admin";
 
 interface PolicyDefinition {
-  ptype: "p" | "p2";
+  ptype: "p" | "p2" | "p3";
   lob?: string | null;
   page?: string | null;
   module?: string | null;
   section?: string | null;
   access?: string | null;
+  field?: string | null;
   parent?: string | null;
   displayName?: string | null;
   route?: string | null;
@@ -19,7 +20,7 @@ interface PolicyDefinition {
 
 interface PolicySummary {
   permission: string;
-  ptype: "p" | "p2";
+  ptype: "p" | "p2" | "p3";
   definitions: PolicyDefinition[];
 }
 
@@ -41,6 +42,12 @@ function describeDefinitions(policy: PolicySummary): string {
       (d.route ? ` · ${d.route}` : "")
     );
   }
+  if (d.ptype === "p3") {
+    return (
+      [d.lob, d.page, d.module, d.section, d.field].filter(Boolean).join(" / ") +
+      (d.access ? ` · ${d.access}` : "")
+    );
+  }
   return (
     [d.lob, d.page, d.module, d.section].filter(Boolean).join(" / ") +
     (d.access ? ` · ${d.access}` : "")
@@ -56,7 +63,7 @@ export default function AddPolicyModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [ptypeFilter, setPtypeFilter] = useState<"all" | "p" | "p2">("all");
+  const [ptypeFilter, setPtypeFilter] = useState<"all" | "p" | "p2" | "p3">("all");
   const [selected, setSelected] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -142,7 +149,7 @@ export default function AddPolicyModal({
             className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
           />
           <div className="inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1">
-            {(["all", "p", "p2"] as const).map((t) => (
+            {(["all", "p", "p2", "p3"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setPtypeFilter(t)}
@@ -192,7 +199,9 @@ export default function AddPolicyModal({
                           className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
                             policy.ptype === "p2"
                               ? "bg-sky-50 text-sky-700"
-                              : "bg-violet-50 text-violet-700"
+                              : policy.ptype === "p3"
+                                ? "bg-amber-50 text-amber-700"
+                                : "bg-violet-50 text-violet-700"
                           }`}
                         >
                           {policy.ptype.toUpperCase()}

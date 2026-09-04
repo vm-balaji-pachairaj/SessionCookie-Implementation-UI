@@ -14,6 +14,17 @@ export interface Permission {
   access: string;
 }
 
+/** Field-level (p3) permission — same shape as Permission plus `field`. */
+export interface FieldPermission {
+  permission: string;
+  lob: string;
+  page: string;
+  module: string;
+  section: string;
+  field: string;
+  access: string;
+}
+
 /** True when the exact permission key is present in the list. */
 export function hasPermission(permissions: Permission[], key: string): boolean {
   return permissions.some((p) => p.permission === key);
@@ -38,4 +49,25 @@ export function getSectionMode(
   if (perm.access === "edit") return "edit";
   if (perm.access === "view") return "view";
   return "none";
+}
+
+/**
+ * Determine how a single field should behave: looks for a p3 field-level
+ * grant matching `section` + `field` first ("edit"/"view"/"none"); if none
+ * exists, falls back to the section's own mode so roles without any p3
+ * rows yet keep working exactly as before.
+ */
+export function getFieldMode(
+  fieldPermissions: FieldPermission[],
+  section: string,
+  field: string,
+  fallback: "edit" | "view" | "none" = "none"
+): "edit" | "view" | "none" {
+  const perm = fieldPermissions.find(
+    (p) => p.section === section && p.field === field
+  );
+  if (!perm) return fallback;
+  if (perm.access === "edit") return "edit";
+  if (perm.access === "view") return "view";
+  return fallback;
 }

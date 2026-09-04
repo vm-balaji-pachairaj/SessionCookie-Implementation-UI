@@ -11,13 +11,14 @@ import ConfirmDialog from "./ConfirmDialog";
 const ADMIN_API = "http://localhost:5000/api/admin";
 
 interface RolePermission {
-  ptype: "p" | "p2";
+  ptype: "p" | "p2" | "p3";
   permission: string;
   lob?: string | null;
   page?: string | null;
   module?: string | null;
   section?: string | null;
   access?: string | null;
+  field?: string | null;
   parent?: string | null;
   displayName?: string | null;
   route?: string | null;
@@ -34,6 +35,12 @@ function describePermission(perm: RolePermission): string {
     return (
       [perm.parent, perm.displayName].filter(Boolean).join(" / ") +
       (perm.route ? ` · ${perm.route}` : "")
+    );
+  }
+  if (perm.ptype === "p3") {
+    return (
+      [perm.page, perm.module, perm.section, perm.field].filter(Boolean).join(" / ") +
+      (perm.access ? ` · ${perm.access}` : "")
     );
   }
   return (
@@ -54,7 +61,7 @@ export default function RolePermissionsPanel({
   const [permissions, setPermissions] = useState<RolePermission[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [ptypeFilter, setPtypeFilter] = useState<"all" | "p" | "p2">("all");
+  const [ptypeFilter, setPtypeFilter] = useState<"all" | "p" | "p2" | "p3">("all");
 
   const [viewDefinitionsFor, setViewDefinitionsFor] = useState<{
     permission: string;
@@ -134,12 +141,12 @@ export default function RolePermissionsPanel({
             </h2>
             <p className="mt-0.5 text-xs text-slate-500">
               {permissions.length} polic
-              {permissions.length !== 1 ? "ies" : "y"} assigned (P &amp; P2)
+              {permissions.length !== 1 ? "ies" : "y"} assigned (P, P2 &amp; P3)
             </p>
           </div>
           <div className="flex items-center gap-3">
             <div className="inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1">
-              {(["all", "p", "p2"] as const).map((t) => (
+              {(["all", "p", "p2", "p3"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setPtypeFilter(t)}
@@ -207,7 +214,9 @@ export default function RolePermissionsPanel({
                         className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                           perm.ptype === "p2"
                             ? "bg-sky-50 text-sky-700"
-                            : "bg-violet-50 text-violet-700"
+                            : perm.ptype === "p3"
+                              ? "bg-amber-50 text-amber-700"
+                              : "bg-violet-50 text-violet-700"
                         }`}
                       >
                         {perm.ptype.toUpperCase()}

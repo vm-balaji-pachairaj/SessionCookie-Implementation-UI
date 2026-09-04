@@ -8,6 +8,7 @@ import UserForm, {
 import {
   hasPermission,
   type Permission,
+  type FieldPermission,
 } from "@/lib/permissions";
 
 const PERM_DEACTIVATE =
@@ -18,6 +19,7 @@ const PERM_ACTIVATE =
 
 interface DeactivateUserPageProps {
   permissions?: Permission[];
+  fieldPermissions?: FieldPermission[];
 }
 
 interface UserResponse {
@@ -41,6 +43,7 @@ type ActionMode = "deactivate" | "activate";
 
 export default function DeactivateUserPage({
   permissions = [],
+  fieldPermissions = [],
 }: DeactivateUserPageProps) {
   const router = useRouter();
 
@@ -268,6 +271,7 @@ export default function DeactivateUserPage({
         <UserForm
           mode={actionMode}
           permissions={permissions}
+          fieldPermissions={fieldPermissions}
           initialData={
             loadedUser ?? {}
           }

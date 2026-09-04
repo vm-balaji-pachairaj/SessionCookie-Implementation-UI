@@ -3,8 +3,10 @@
 import { useState } from "react";
 import {
   getSectionMode,
+  getFieldMode,
   hasPermission,
   type Permission,
+  type FieldPermission,
 } from "@/lib/permissions";
 import api from "../app/common";
 
@@ -53,6 +55,9 @@ export interface UserFormProps {
 
   permissions: Permission[];
 
+  /** Field-level (p3) access — refines what's editable/viewable within a section the role can already see. */
+  fieldPermissions?: FieldPermission[];
+
   /** Pre-fill values for update / deactivate / activate mode. */
   initialData?: Partial<UserFormData>;
 
@@ -79,6 +84,7 @@ const EMPTY: UserFormData = {
 export default function UserForm({
   mode,
   permissions,
+  fieldPermissions = [],
   initialData = {},
   userId,
   onSuccess,
@@ -138,6 +144,35 @@ export default function UserForm({
     isStatusAction && rawRoleMode !== "none"
       ? "view"
       : rawRoleMode;
+
+  // ── Resolve field-level (p3) modes, falling back to the section mode ───────
+  // when a role has no field-level grants yet (keeps older roles working).
+
+  function resolveFieldMode(
+    section: string,
+    field: string,
+    sectionFallback: SectionMode,
+  ): SectionMode {
+    const raw = getFieldMode(
+      fieldPermissions,
+      section,
+      field,
+      sectionFallback,
+    );
+
+    return isStatusAction && raw !== "none" ? "view" : raw;
+  }
+
+  const firstNameMode = resolveFieldMode("basicDetails", "firstName", rawBasicMode);
+  const lastNameMode = resolveFieldMode("basicDetails", "lastName", rawBasicMode);
+  const employeeIdMode = resolveFieldMode("basicDetails", "employeeId", rawBasicMode);
+
+  const emailMode = resolveFieldMode("contactDetails", "email", rawContactMode);
+  const phoneMode = resolveFieldMode("contactDetails", "phone", rawContactMode);
+  const addressMode = resolveFieldMode("contactDetails", "address", rawContactMode);
+
+  const roleFieldMode = resolveFieldMode("roleAccess", "role", rawRoleMode);
+  const departmentMode = resolveFieldMode("roleAccess", "department", rawRoleMode);
 
   // ── Action permissions ─────────────────────────────────────────────────────
 
@@ -351,47 +386,53 @@ export default function UserForm({
           description="Name and employee identifier."
         >
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label="First Name"
-              value={fields.firstName}
-              onChange={(v) =>
-                set("firstName", v)
-              }
-              readonly={
-                basicMode === "view"
-              }
-              required={
-                basicMode === "edit" &&
-                mode === "create"
-              }
-            />
+            {firstNameMode !== "none" && (
+              <Field
+                label="First Name"
+                value={fields.firstName}
+                onChange={(v) =>
+                  set("firstName", v)
+                }
+                readonly={
+                  firstNameMode === "view"
+                }
+                required={
+                  firstNameMode === "edit" &&
+                  mode === "create"
+                }
+              />
+            )}
 
-            <Field
-              label="Last Name"
-              value={fields.lastName}
-              onChange={(v) =>
-                set("lastName", v)
-              }
-              readonly={
-                basicMode === "view"
-              }
-              required={
-                basicMode === "edit" &&
-                mode === "create"
-              }
-            />
+            {lastNameMode !== "none" && (
+              <Field
+                label="Last Name"
+                value={fields.lastName}
+                onChange={(v) =>
+                  set("lastName", v)
+                }
+                readonly={
+                  lastNameMode === "view"
+                }
+                required={
+                  lastNameMode === "edit" &&
+                  mode === "create"
+                }
+              />
+            )}
 
-            <Field
-              label="Employee ID"
-              value={fields.employeeId}
-              onChange={(v) =>
-                set("employeeId", v)
-              }
-              readonly={
-                basicMode === "view"
-              }
-              placeholder="e.g. EMP-00123"
-            />
+            {employeeIdMode !== "none" && (
+              <Field
+                label="Employee ID"
+                value={fields.employeeId}
+                onChange={(v) =>
+                  set("employeeId", v)
+                }
+                readonly={
+                  employeeIdMode === "view"
+                }
+                placeholder="e.g. EMP-00123"
+              />
+            )}
           </div>
         </FormSection>
       )}
@@ -405,63 +446,69 @@ export default function UserForm({
           description="Email address, phone number, and office address."
         >
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label="Email"
-              type="email"
-              value={fields.email}
-              onChange={(v) =>
-                set("email", v)
-              }
-              readonly={
-                contactMode === "view"
-              }
-              required={
-                contactMode === "edit" &&
-                mode === "create"
-              }
-            />
+            {emailMode !== "none" && (
+              <Field
+                label="Email"
+                type="email"
+                value={fields.email}
+                onChange={(v) =>
+                  set("email", v)
+                }
+                readonly={
+                  emailMode === "view"
+                }
+                required={
+                  emailMode === "edit" &&
+                  mode === "create"
+                }
+              />
+            )}
 
-            <Field
-              label="Phone"
-              type="tel"
-              value={fields.phone}
-              onChange={(v) =>
-                set("phone", v)
-              }
-              readonly={
-                contactMode === "view"
-              }
-              placeholder="+91 XXXXX XXXXX"
-            />
+            {phoneMode !== "none" && (
+              <Field
+                label="Phone"
+                type="tel"
+                value={fields.phone}
+                onChange={(v) =>
+                  set("phone", v)
+                }
+                readonly={
+                  phoneMode === "view"
+                }
+                placeholder="+91 XXXXX XXXXX"
+              />
+            )}
 
-            <div className="sm:col-span-2">
-              <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-                Address
-              </label>
+            {addressMode !== "none" && (
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                  Address
+                </label>
 
-              {contactMode === "view" ? (
-                <div className="min-h-[68px] w-full rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                  {fields.address || (
-                    <span className="text-slate-300">
-                      —
-                    </span>
-                  )}
-                </div>
-              ) : (
-                <textarea
-                  rows={2}
-                  value={fields.address}
-                  onChange={(e) =>
-                    set(
-                      "address",
-                      e.target.value,
-                    )
-                  }
-                  placeholder="Office / building address"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-                />
-              )}
-            </div>
+                {addressMode === "view" ? (
+                  <div className="min-h-[68px] w-full rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                    {fields.address || (
+                      <span className="text-slate-300">
+                        —
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <textarea
+                    rows={2}
+                    value={fields.address}
+                    onChange={(e) =>
+                      set(
+                        "address",
+                        e.target.value,
+                      )
+                    }
+                    placeholder="Office / building address"
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                  />
+                )}
+              </div>
+            )}
           </div>
         </FormSection>
       )}
@@ -475,32 +522,36 @@ export default function UserForm({
           description="Assign the user's role, department, and view their permissions."
         >
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label="Role"
-              value={fields.role}
-              onChange={(v) =>
-                set("role", v)
-              }
-              readonly={
-                roleMode === "view"
-              }
-              placeholder="e.g. Support Initiator"
-            />
+            {roleFieldMode !== "none" && (
+              <Field
+                label="Role"
+                value={fields.role}
+                onChange={(v) =>
+                  set("role", v)
+                }
+                readonly={
+                  roleFieldMode === "view"
+                }
+                placeholder="e.g. Support Initiator"
+              />
+            )}
 
-            <Field
-              label="Department"
-              value={fields.department}
-              onChange={(v) =>
-                set(
-                  "department",
-                  v,
-                )
-              }
-              readonly={
-                roleMode === "view"
-              }
-              placeholder="e.g. HCP Operations"
-            />
+            {departmentMode !== "none" && (
+              <Field
+                label="Department"
+                value={fields.department}
+                onChange={(v) =>
+                  set(
+                    "department",
+                    v,
+                  )
+                }
+                readonly={
+                  departmentMode === "view"
+                }
+                placeholder="e.g. HCP Operations"
+              />
+            )}
           </div>
 
           {/* Permissions display */}
