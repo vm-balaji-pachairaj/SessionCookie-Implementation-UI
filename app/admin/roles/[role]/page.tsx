@@ -2,9 +2,9 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import RolePermissionsPanel from "@/component/admin/RolePermissionsPanel";
+import RoleBundlesPanel from "@/component/admin/RoleBundlesPanel";
 
-export default function RolePermissionsPage() {
+export default function RoleBundlesPage() {
   const params = useParams<{ role: string }>();
   const role = decodeURIComponent(params.role);
 
@@ -21,7 +21,7 @@ export default function RolePermissionsPage() {
               {role}
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              View, add and remove policies assigned to this role.
+              View, assign and remove Policy Bundles configured for this role.
             </p>
           </div>
 
@@ -33,8 +33,9 @@ export default function RolePermissionsPage() {
           </Link>
         </div>
 
-        <RolePermissionsPanel role={role} />
+        <RoleBundlesPanel role={role} />
       </div>
     </div>
   );
 }
+

@@ -24,6 +24,8 @@ import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
 import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
 import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt';
 
+const AnyGrid: any = Grid;
+
 interface PubSubMessage {
   data: Record<string, any>;
   timestamp?: string;
@@ -161,9 +163,9 @@ export default function PubSubSubscriberComponent() {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
+      <AnyGrid container spacing={3}>
         {/* Listening Status */}
-        <Grid item xs={12} md={6}>
+        <AnyGrid item xs={12} md={6}>
           <Card>
             <CardHeader title="Subscriber Status" />
             <Divider />
@@ -201,10 +203,10 @@ export default function PubSubSubscriberComponent() {
               )}
             </CardContent>
           </Card>
-        </Grid>
+        </AnyGrid>
 
         {/* Message Count */}
-        <Grid item xs={12} md={6}>
+        <AnyGrid item xs={12} md={6}>
           <Card>
             <CardHeader title="Queue Statistics" />
             <Divider />
@@ -225,10 +227,10 @@ export default function PubSubSubscriberComponent() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </AnyGrid>
 
         {/* Recent Messages */}
-        <Grid item xs={12}>
+        <AnyGrid item xs={12}>
           <Card>
             <CardHeader
               title="Recent Messages"
@@ -344,8 +346,8 @@ export default function PubSubSubscriberComponent() {
               )}
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </AnyGrid>
+      </AnyGrid>
 
       <style>{`
         @keyframes pulse {

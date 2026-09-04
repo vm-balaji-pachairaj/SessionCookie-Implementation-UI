@@ -20,6 +20,9 @@ import SendIcon from '@mui/icons-material/Send';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import ErrorIcon from '@mui/icons-material/Error';
 
+const AnyGrid: any = Grid;
+const AnyTextField: any = TextField;
+
 interface PublishResponse {
   success: boolean;
   messageId: string;
@@ -167,9 +170,9 @@ export default function PubSubProducerComponent() {
         📡 Google Cloud Pub/Sub Producer
       </Typography>
 
-      <Grid container spacing={3}>
+      <AnyGrid container spacing={3}>
         {/* Status Card */}
-        <Grid item xs={12}>
+        <AnyGrid item xs={12}>
           <Card>
             <CardHeader
               title="Pub/Sub Status"
@@ -206,10 +209,10 @@ export default function PubSubProducerComponent() {
               </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </AnyGrid>
 
         {/* Main Publisher Card */}
-        <Grid item xs={12} md={8}>
+        <AnyGrid item xs={12} md={8}>
           <Card>
             <CardHeader
               title="Publish Message"
@@ -230,8 +233,10 @@ export default function PubSubProducerComponent() {
                 fullWidth
                 size="small"
                 select
-                SelectProps={{
-                  native: true,
+                slotProps={{
+                  select: {
+                    native: true,
+                  },
                 }}
               >
                 <option value="SESSION_CREATED">SESSION_CREATED</option>
@@ -282,10 +287,10 @@ export default function PubSubProducerComponent() {
               </Button>
             </CardContent>
           </Card>
-        </Grid>
+        </AnyGrid>
 
         {/* Dummy Events Card */}
-        <Grid item xs={12} md={4}>
+        <AnyGrid item xs={12} md={4}>
           <Card>
             <CardHeader
               title="Quick Load"
@@ -306,11 +311,11 @@ export default function PubSubProducerComponent() {
               ))}
             </CardContent>
           </Card>
-        </Grid>
+        </AnyGrid>
 
         {/* Publish History */}
         {publishHistory.length > 0 && (
-          <Grid item xs={12}>
+          <AnyGrid item xs={12}>
             <Card>
               <CardHeader
                 title="Recent Publishes"
@@ -345,9 +350,9 @@ export default function PubSubProducerComponent() {
                 </Box>
               </CardContent>
             </Card>
-          </Grid>
+          </AnyGrid>
         )}
-      </Grid>
+      </AnyGrid>
     </Box>
   );
 }

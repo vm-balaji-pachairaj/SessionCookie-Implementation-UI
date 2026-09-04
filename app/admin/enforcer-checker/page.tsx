@@ -214,8 +214,9 @@ export default function EnforcerCheckerPage() {
               Enforcer Checker
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Pick a role and a policy (P permission or P2 menu), then check
-              whether the Casbin enforcer allows it.
+              Pick a role and a policy (P section, P2 menu, or P3 field), then verify
+              authorization evaluated through the role&apos;s assigned Policy Bundles
+              (Role ──(g3)──&gt; Policy Bundle ──(g)──&gt; Policy).
             </p>
           </div>
           <Link
@@ -447,15 +448,18 @@ export default function EnforcerCheckerPage() {
                   >
                     {result.allowed ? "Allowed" : "Denied"}
                   </p>
-                  <p className="text-sm text-slate-600">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mt-0.5">
+                    Evaluated via Centralized Enforcer (Role ──g3──&gt; Policy Bundle ──g──&gt; Policy)
+                  </p>
+                  <p className="text-xs text-slate-600 font-mono mt-1">
                     {result.ptype === "p2" ? (
                       <>
-                        enforceP2(&ldquo;{result.role}&rdquo;, &ldquo;
+                        casbinService.enforce(&ldquo;{result.role}&rdquo;, &ldquo;
                         {result.key}&rdquo;)
                       </>
                     ) : result.ptype === "p3" ? (
                       <>
-                        enforceField(&ldquo;{result.role}&rdquo;, &ldquo;
+                        casbinService.enforce(&ldquo;{result.role}&rdquo;, &ldquo;
                         {result.lob}&rdquo;, &ldquo;{result.page}&rdquo;,
                         &ldquo;{result.module}&rdquo;, &ldquo;{result.section}
                         &rdquo;, &ldquo;{result.field}&rdquo;, &ldquo;
@@ -463,7 +467,7 @@ export default function EnforcerCheckerPage() {
                       </>
                     ) : (
                       <>
-                        enforce(&ldquo;{result.role}&rdquo;, &ldquo;
+                        casbinService.enforce(&ldquo;{result.role}&rdquo;, &ldquo;
                         {result.lob}&rdquo;, &ldquo;{result.page}&rdquo;,
                         &ldquo;{result.module}&rdquo;, &ldquo;{result.section}
                         &rdquo;, &ldquo;{result.access}&rdquo;)
