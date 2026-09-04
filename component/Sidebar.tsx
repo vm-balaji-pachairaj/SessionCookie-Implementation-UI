@@ -40,6 +40,8 @@ interface SidebarProps {
   onNavClick?: (key: string) => void;
   onLogout: () => void;
   loggingOut?: boolean;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -55,8 +57,12 @@ export default function Sidebar({
   onNavClick,
   onLogout,
   loggingOut = false,
+  collapsed: externalCollapsed,
+  onToggleCollapsed,
 }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [internalCollapsed, setInternalCollapsed] = useState(false);
+  const collapsed = externalCollapsed !== undefined ? externalCollapsed : internalCollapsed;
+  const toggleCollapse = onToggleCollapsed || (() => setInternalCollapsed((c) => !c));
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
 
   const roleMenuRef = useRef<HTMLDivElement>(null);
@@ -106,14 +112,19 @@ export default function Sidebar({
       {/* Logo / brand */}
       <div className="flex h-16 items-center justify-between border-b border-slate-100 px-4">
         {!collapsed && (
-          <span className="truncate text-sm font-bold tracking-wide text-violet-600">
-            MyApp
-          </span>
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-6 items-center justify-center rounded bg-[#C81E1E] text-white">
+              <span className="text-xs font-black">A</span>
+            </div>
+            <span className="truncate text-sm font-bold tracking-wide text-slate-900">
+              ABC Portal
+            </span>
+          </div>
         )}
 
         <button
           onClick={() => {
-            setCollapsed((c) => !c);
+            toggleCollapse();
             setRoleMenuOpen(false);
           }}
           className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
@@ -136,14 +147,14 @@ export default function Sidebar({
                   title={collapsed ? item.label : undefined}
                   className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                     isActive
-                      ? "bg-violet-50 text-violet-700"
+                      ? "bg-red-50 text-[#C81E1E] font-semibold"
                       : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                   }`}
                 >
                   <span
                     className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-base ${
                       isActive
-                        ? "bg-violet-600 text-white"
+                        ? "bg-[#C81E1E] text-white"
                         : "bg-slate-100 text-slate-500"
                     }`}
                   >
@@ -229,13 +240,13 @@ export default function Sidebar({
                         setRoleMenuOpen(false);
                       }}
                       className={`flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-slate-50 ${
-                        isActive ? "bg-violet-50" : ""
+                        isActive ? "bg-red-50" : ""
                       }`}
                     >
                       <div
                         className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-bold ${
                           isActive
-                            ? "bg-violet-600 text-white"
+                            ? "bg-[#C81E1E] text-white"
                             : "bg-slate-100 text-slate-600"
                         }`}
                       >
@@ -246,7 +257,7 @@ export default function Sidebar({
                         <p
                           className={`truncate text-sm font-semibold ${
                             isActive
-                              ? "text-violet-700"
+                              ? "text-[#C81E1E]"
                               : "text-slate-800"
                           }`}
                         >
@@ -261,7 +272,7 @@ export default function Sidebar({
                       </div>
 
                       {isActive && (
-                        <span className="shrink-0 text-sm text-violet-600">
+                        <span className="shrink-0 text-sm text-[#C81E1E] font-bold">
                           ✓
                         </span>
                       )}
@@ -294,7 +305,7 @@ export default function Sidebar({
               : ""
           }`}
         >
-          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-600 text-xs font-bold text-white">
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
             {initials}
 
             <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-400" />

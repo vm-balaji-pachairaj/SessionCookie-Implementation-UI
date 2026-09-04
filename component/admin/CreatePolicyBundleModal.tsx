@@ -48,22 +48,29 @@ export default function CreatePolicyBundleModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
       onClick={onClose}
     >
       <div
-        className="relative flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="relative flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">
-              Create Policy Bundle
-            </h3>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Define a new bundle to group section, menu, and field permissions.
-            </p>
+        <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-[#C81E1E]">
+              <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                Create Policy Bundle
+              </h3>
+              <p className="text-xs text-slate-500">
+                Define a new bundle to group section, menu, and field permissions.
+              </p>
+            </div>
           </div>
           <button
             type="button"
@@ -78,27 +85,27 @@ export default function CreatePolicyBundleModal({
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 px-6 py-5">
             {error && (
-              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-2.5 text-sm text-red-600">
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-700">
                 {error}
               </div>
             )}
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
-                Bundle Name <span className="text-red-500">*</span>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                Bundle Name <span className="text-red-600">*</span>
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Call Center Supervisor Bundle"
-                className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#C81E1E] focus:ring-2 focus:ring-red-100"
                 autoFocus
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
                 Description
               </label>
               <textarea
@@ -106,24 +113,24 @@ export default function CreatePolicyBundleModal({
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Briefly describe the purpose of this policy bundle..."
-                className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                className="mt-1.5 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#C81E1E] focus:ring-2 focus:ring-red-100"
               />
             </div>
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+          <div className="flex items-center justify-end gap-2 border-t border-slate-200 bg-slate-50 px-6 py-3.5">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!name.trim() || saving}
-              className="rounded-lg bg-violet-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-[#C81E1E] px-5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#B91C1C] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? "Creating…" : "Create Bundle"}
             </button>
@@ -133,4 +140,3 @@ export default function CreatePolicyBundleModal({
     </div>
   );
 }
-

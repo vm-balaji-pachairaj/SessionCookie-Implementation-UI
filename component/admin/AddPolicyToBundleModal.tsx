@@ -27,6 +27,7 @@ interface PolicySummary {
 interface AddPolicyToBundleModalProps {
   bundleId: number;
   bundleName: string;
+  initialPtype?: "all" | "p" | "p2" | "p3";
   onClose: () => void;
   onAdded: () => void;
 }
@@ -58,6 +59,7 @@ function describeDefinitions(policy: PolicySummary): string {
 export default function AddPolicyToBundleModal({
   bundleId,
   bundleName,
+  initialPtype = "all",
   onClose,
   onAdded,
 }: AddPolicyToBundleModalProps) {
@@ -65,7 +67,7 @@ export default function AddPolicyToBundleModal({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
-  const [ptypeFilter, setPtypeFilter] = useState<"all" | "p" | "p2" | "p3">("all");
+  const [ptypeFilter, setPtypeFilter] = useState<"all" | "p" | "p2" | "p3">(initialPtype);
   const [selected, setSelected] = useState<PolicySummary | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -126,20 +128,27 @@ export default function AddPolicyToBundleModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
       onClick={onClose}
     >
       <div
-        className="relative flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+        className="relative flex max-h-[85vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl border border-slate-200"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">Add Policy</h3>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Add an individual policy to bundle &ldquo;{bundleName}&rdquo;.
-            </p>
+        <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-[#C81E1E]">
+              <svg className="h-5 w-5 fill-current" viewBox="0 0 24 24">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Add Policy to Bundle</h3>
+              <p className="text-xs text-slate-500">
+                Adding to bundle <strong className="text-slate-800">{bundleName}</strong>
+              </p>
+            </div>
           </div>
           <button
             type="button"
@@ -150,35 +159,59 @@ export default function AddPolicyToBundleModal({
           </button>
         </div>
 
-        {/* Search + type filter */}
-        <div className="space-y-2 px-6 pt-4">
+        {/* Search + type filter tabs (Scan Tag pill style) */}
+        <div className="space-y-3 border-b border-slate-100 bg-slate-50/50 px-6 py-4">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search policies..."
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+            placeholder="Search policies by permission name..."
+            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#C81E1E] focus:ring-2 focus:ring-red-100"
             autoFocus
           />
-          <div className="inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1">
-            {(["all", "p", "p2", "p3"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setPtypeFilter(t)}
-                className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
-                  ptypeFilter === t
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-800"
-                }`}
-              >
-                {t === "all" ? "All" : t.toUpperCase()}
-              </button>
-            ))}
+
+          {/* Pill tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            {(["all", "p", "p2", "p3"] as const).map((t) => {
+              const count =
+                t === "all"
+                  ? available.length
+                  : available.filter((p) => p.ptype === t).length;
+              const isActive = ptypeFilter === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setPtypeFilter(t)}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition ${
+                    isActive
+                      ? "bg-slate-900 text-white shadow-xs"
+                      : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                  }`}
+                >
+                  <span>
+                    {t === "all"
+                      ? "All"
+                      : t === "p"
+                      ? "p (Section)"
+                      : t === "p2"
+                      ? "p2 (Menu)"
+                      : "p3 (Field)"}
+                  </span>
+                  <span
+                    className={`rounded-full px-1.5 py-0.2 text-[10px] ${
+                      isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-700"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {error && (
-          <div className="mx-6 mt-3 rounded-xl border border-red-100 bg-red-50 px-4 py-2 text-sm text-red-600">
+          <div className="mx-6 mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-xs text-red-700">
             {error}
           </div>
         )}
@@ -186,57 +219,60 @@ export default function AddPolicyToBundleModal({
         {/* List */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           {loading ? (
-            <p className="py-8 text-center text-sm text-slate-500">
-              Loading policies…
+            <p className="py-8 text-center text-xs text-slate-400">
+              Loading available policies…
             </p>
           ) : filtered.length === 0 ? (
-            <p className="py-8 text-center text-sm text-slate-500">
-              No unassigned policies found.
+            <p className="py-8 text-center text-xs text-slate-400">
+              No unassigned policies found matching current filters.
             </p>
           ) : (
             <ul className="space-y-1.5">
               {filtered.map((policy) => {
-                const isSelected = selected?.permission === policy.permission && selected?.ptype === policy.ptype;
+                const isSelected =
+                  selected?.permission === policy.permission &&
+                  selected?.ptype === policy.ptype;
                 return (
-                  <li key={`${policy.ptype}:${policy.permission}`}>
+                  <li key={`${policy.ptype}-${policy.permission}`}>
                     <button
                       type="button"
                       onClick={() => setSelected(policy)}
-                      className={`flex w-full items-start justify-between gap-3 rounded-lg border px-3 py-2.5 text-left transition ${
+                      className={`flex w-full items-start justify-between gap-3 rounded-xl border p-3 text-left transition ${
                         isSelected
-                          ? "border-violet-400 bg-violet-50"
-                          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                          ? "border-[#C81E1E] bg-red-50/40 shadow-xs ring-1 ring-[#C81E1E]"
+                          : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
                       }`}
                     >
-                      <div className="min-w-0">
-                        <span className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
                           <span
-                            className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
                               policy.ptype === "p2"
-                                ? "bg-sky-50 text-sky-700"
+                                ? "bg-purple-100 text-purple-700"
                                 : policy.ptype === "p3"
-                                  ? "bg-amber-50 text-amber-700"
-                                  : "bg-violet-50 text-violet-700"
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-blue-100 text-blue-700"
                             }`}
                           >
-                            {policy.ptype.toUpperCase()}
+                            {policy.ptype}
                           </span>
                           <span
-                            className={`block truncate font-mono text-xs ${
-                              isSelected
-                                ? "text-violet-700 font-semibold"
-                                : "text-slate-700"
+                            className={`font-mono text-xs font-semibold ${
+                              isSelected ? "text-[#C81E1E]" : "text-slate-800"
                             }`}
                           >
                             {policy.permission}
                           </span>
-                        </span>
-                        <span className="mt-1 block truncate text-[11px] text-slate-400">
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-500 line-clamp-1">
                           {describeDefinitions(policy)}
-                        </span>
+                        </p>
                       </div>
+
                       {isSelected && (
-                        <span className="mt-0.5 shrink-0 text-violet-600">✓</span>
+                        <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#C81E1E] text-white text-[10px] font-bold">
+                          ✓
+                        </div>
                       )}
                     </button>
                   </li>
@@ -247,25 +283,35 @@ export default function AddPolicyToBundleModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={!selected || saving}
-            className="rounded-lg bg-violet-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-violet-500/20 transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving ? "Saving…" : "Add to Bundle"}
-          </button>
+        <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-3.5">
+          <span className="text-xs text-slate-500">
+            {selected ? (
+              <span>
+                Selected: <strong className="text-slate-800">{selected.permission}</strong> ({selected.ptype})
+              </span>
+            ) : (
+              <span>Select a policy above</span>
+            )}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!selected || saving}
+              className="rounded-lg bg-[#C81E1E] px-5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#B91C1C] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {saving ? "Adding…" : "Add Policy to Bundle"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-

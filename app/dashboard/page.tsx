@@ -5,8 +5,10 @@ import { usePathname, useRouter } from "next/navigation";
 import api from "../common";
 import IdleTimer from "@/component/IdleTimer";
 import { useIdleTimeout } from "@/hooks/useIdleTimeout";
-import ViewPermissions from "@/component/ViewPermissions";
 import Sidebar from "@/component/Sidebar";
+import ScanTagNavbar from "@/component/ScanTagNavbar";
+import UserRolesBundlesDashboard from "@/component/admin/UserRolesBundlesDashboard";
+import PolicyBundlesPoliciesDashboard from "@/component/admin/PolicyBundlesPoliciesDashboard";
 import MenuPageRenderer, {
   isDashboardHome,
 } from "@/component/MenuPageRenderer";
@@ -90,41 +92,37 @@ interface RefreshResponse {
   user_role_mapping_id?: string;
 }
 
-interface TestLoggerResponse {
-  success: boolean;
-  message: string;
-  logSeverity: "info" | "debug" | "warn" | "error";
-  timestamp: string;
-  statusCode: number;
-}
-
 export default function DashboardPage() {
   const { isIdle, remainingTime, totalWarningTime } = useIdleTimeout();
   const router = useRouter();
   const pathname = usePathname();
 
   const [data, setData] = useState<DashboardResponse | null>(null);
-
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
 
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
-
   const [message, setMessage] = useState("");
-  const [testLoggerData, setTestLoggerData] =
-    useState<TestLoggerResponse | null>(null);
-  const [testLoggerLoading, setTestLoggerLoading] = useState(false);
   const [activeNav, setActiveNav] = useState("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Redesigned dashboard segmented tabs: "roles_bundles" vs. "bundles_policies"
+  const [dashboardTab, setDashboardTab] = useState<
+    "roles_bundles" | "bundles_policies"
+  >("roles_bundles");
+
+  // Optional collapsible drawer for developer API session tools
+  const [showSessionTools, setShowSessionTools] = useState(false);
 
   const dispatch = useDispatch();
-  // ── Axios error helper ────────────────────────────────────────
+
   function errMsg(e: unknown, fallback: string) {
     if (e && typeof e === "object" && "response" in e) {
       const r = (
         e as { response?: { data?: { message?: string }; status?: number } }
       ).response;
-      if (r?.status === 401) return null; // signal 401
+      if (r?.status === 401) return null;
       return r?.data?.message ?? fallback;
     }
     return fallback;
@@ -146,12 +144,11 @@ export default function DashboardPage() {
       dispatch(setMenus(response.data.menus));
 
       setSelectedRole(response.data.role_id);
-      // Set active nav to the current route on first load, then fall back to the landing page.
       if (!activeNav) {
         setActiveNav(
           response.data.landingPage?.[0]?.[2] ||
             response.data.menus?.[0]?.key ||
-            "",
+            "dashboard"
         );
       }
     } catch (error: unknown) {
@@ -188,14 +185,14 @@ export default function DashboardPage() {
           if (prev) return prev;
 
           const currentMenu = response.data.menus?.find(
-            (menu) => menu.route === pathname || `/${menu.key}` === pathname,
+            (menu) => menu.route === pathname || `/${menu.key}` === pathname
           );
 
           return (
             currentMenu?.key ||
             response.data.landingPage?.[0]?.[2] ||
             response.data.menus?.[0]?.key ||
-            ""
+            "dashboard"
           );
         });
       } catch (error: unknown) {
@@ -215,11 +212,10 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [dispatch, pathname, router]);
 
   // ============================================================
-  // Refresh access token manually
+  // Refresh token
   // ============================================================
 
   const handleRefreshToken = async () => {
@@ -228,17 +224,15 @@ export default function DashboardPage() {
       setMessage("");
 
       const response = await api.post<RefreshResponse>("/refresh");
-
       setMessage(
-        response.data.message || "Access token refreshed successfully.",
+        response.data.message || "Access token refreshed successfully."
       );
-
       await fetchDashboard();
     } catch (error: unknown) {
       console.error("Refresh error:", error);
       setMessage(
         errMsg(error, "Session expired. Please login again.") ??
-          "Session expired. Please login again.",
+          "Session expired. Please login again."
       );
       router.push("/login");
     } finally {
@@ -255,8 +249,6 @@ export default function DashboardPage() {
       setSelectedRole(role.role_id);
       setMessage("");
 
-      // /changerole already returns permissions + menus directly —
-      // no need to call /dashboard again at all
       const changeRoleRes = await api.post("/changerole", {
         user_role_mapping_id: role.user_role_mapping_id,
         role_id: role.role_id,
@@ -266,8 +258,6 @@ export default function DashboardPage() {
       dispatch(setPermissions(changeRoleRes.data.permissions));
       dispatch(setFieldPermissions(changeRoleRes.data.fieldPermissions));
 
-      // /changerole returns the single active role, not the full roles list —
-      // keep prev.currentRole (the full list) intact for the role switcher.
       setData((prev) =>
         prev
           ? {
@@ -277,36 +267,25 @@ export default function DashboardPage() {
               menus: changeRoleRes.data.menus,
               landingPage: changeRoleRes.data.landingPage,
             }
-          : prev,
+          : prev
       );
 
       setSelectedRole(role.role_id);
-
-      const landingKey =
-        changeRoleRes.data.landingPage?.[0]?.[2] ??
-        changeRoleRes.data.menus?.[0]?.key ??
-        "";
-
-      setActiveNav(landingKey);
-      router.push(`/${landingKey}`);
       setMessage(
-        `Role changed to ${role.role_master?.role_name || "selected role"}.`,
+        `Active session switched to ${
+          role.role_master?.role_name || "selected role"
+        }.`
       );
     } catch (error: unknown) {
       console.error("Role change error:", error);
       setMessage(
-        errMsg(error, "Unable to change role.") ?? "Unable to change role.",
+        errMsg(error, "Unable to change role.") ?? "Unable to change role."
       );
     }
   };
 
   const handleNavClick = (key: string) => {
     setActiveNav(key);
-    // router.push(`/${key}`);
-  };
-
-  const openUserManagement = () => {
-    setActiveNav("user_management");
   };
 
   // ============================================================
@@ -316,7 +295,6 @@ export default function DashboardPage() {
   const handleLogout = async () => {
     try {
       setLoggingOut(true);
-
       await api.post("/logout");
       dispatch(clearPermissions());
       dispatch(clearFieldPermissions());
@@ -324,67 +302,34 @@ export default function DashboardPage() {
       router.push("/login");
     } catch (error) {
       console.error("Logout error:", error);
-
-      // Even if API fails, don't keep user on dashboard
       router.push("/login");
     } finally {
       setLoggingOut(false);
     }
   };
 
-  // ============================================================
-  // Test Logger
-  // ============================================================
-
-  const handleTestLogger = async () => {
-    try {
-      setTestLoggerLoading(true);
-      setMessage("");
-
-      const response = await api.post<TestLoggerResponse>("/test-logger");
-
-      setTestLoggerData(response.data);
-      setMessage(response.data.message);
-    } catch (error: any) {
-      console.error("Test logger error:", error);
-
-      setMessage(error?.response?.data?.message || "Failed to test logger.");
-      setTestLoggerData(null);
-    } finally {
-      setTestLoggerLoading(false);
-    }
-  };
-
-  // ============================================================
-  // Loading
-  // ============================================================
-
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <main className="min-h-screen bg-[#F4F6F9] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-violet-600" />
-
-          <p className="text-sm text-slate-500">Loading dashboard...</p>
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-[#C81E1E]" />
+          <p className="text-xs font-semibold text-slate-500">
+            Loading Casbin RBAC Portal…
+          </p>
         </div>
       </main>
     );
   }
 
-  // ============================================================
-  // Dashboard
-  // ============================================================
-
   const currentRoleName =
     data?.currentRole?.find((r) => r.role_id === selectedRole)?.role_master
-      ?.role_name ?? undefined;
+      ?.role_name ?? "RBAC Administrator";
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-[#F4F6F9]">
       {/* ======================================================
-          Sidebar
+          Collapsible Sidebar
       ====================================================== */}
-
       <Sidebar
         username={data?.user?.username}
         ntId={data?.user?.id}
@@ -396,57 +341,49 @@ export default function DashboardPage() {
         onNavClick={handleNavClick}
         onLogout={handleLogout}
         loggingOut={loggingOut}
+        collapsed={sidebarCollapsed}
+        onToggleCollapsed={() => setSidebarCollapsed((c) => !c)}
       />
 
       {/* ======================================================
-          Main content
+          Main Content Column
       ====================================================== */}
+      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
+        {/* Top Navbar with Casbin RBAC branding */}
+        <ScanTagNavbar
+          onToggleSidebar={() => setSidebarCollapsed((c) => !c)}
+          username={data?.user?.username || "Security Admin"}
+          roleName={currentRoleName}
+          onLogout={handleLogout}
+        />
 
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Header */}
-        <header className="border-b border-slate-200 bg-white">
-          <div className="flex items-center justify-between px-6 py-5">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600">
-                Overview
-              </p>
-
-              <h1 className="mt-1 text-2xl font-bold text-slate-900">
-                Dashboard
-              </h1>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Manage your application and API session.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              {/* Connection */}
-              <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-600 shadow-sm sm:flex">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                API Connected
-              </div>
-
-              {isIdle && (
-                <IdleTimer
-                  remainingTime={remainingTime}
-                  totalWarningTime={totalWarningTime}
-                />
-              )}
-            </div>
-          </div>
-        </header>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-8">
-          {/* Message */}
+        {/* Scrollable Page Body */}
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          {/* Status / Alert Banner */}
           {message && (
-            <div className="mb-6 rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 text-sm text-violet-700">
-              {message}
+            <div className="mb-4 flex items-center justify-between rounded-xl border border-red-200 bg-red-50/70 px-4 py-2.5 text-xs font-semibold text-red-700">
+              <span>{message}</span>
+              <button
+                type="button"
+                onClick={() => setMessage("")}
+                className="text-red-400 hover:text-red-700"
+              >
+                ✕
+              </button>
             </div>
           )}
 
-          {/* Non-dashboard menu pages */}
+          {/* Idle Timeout Warning */}
+          {isIdle && (
+            <div className="mb-4">
+              <IdleTimer
+                remainingTime={remainingTime}
+                totalWarningTime={totalWarningTime}
+              />
+            </div>
+          )}
+
+          {/* If another menu item like User Management or Search is selected */}
           {activeNav && !isDashboardHome(activeNav) ? (
             <MenuPageRenderer
               activeKey={activeNav}
@@ -456,353 +393,173 @@ export default function DashboardPage() {
           ) : (
             <>
               {/* ====================================================
-            Top cards
-        ==================================================== */}
-
-              <div className="grid gap-6 lg:grid-cols-2">
-                {/* Dashboard API */}
-                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
-                      ↗
-                    </div>
-
-                    <div>
-                      <h2 className="font-semibold text-slate-900">
-                        Dashboard API
-                      </h2>
-
-                      <p className="mt-1 text-sm text-slate-500">
-                        Fetch the latest dashboard information from the backend.
-                      </p>
-                    </div>
+                  Casbin RBAC Page Header & Segmented Pill Switch
+              ==================================================== */}
+              <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#C81E1E]">
+                      Access Control
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="text-xs font-medium text-slate-500">
+                      Casbin RBAC Matrix
+                    </span>
                   </div>
+                  <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-900">
+                    Role & Policy Management
+                  </h1>
+                  <p className="mt-0.5 text-xs font-medium text-slate-500">
+                    Search, filter and manage user roles, policy bundles, and granular permission access rules.
+                  </p>
+                </div>
 
+                {/* Segmented Pill Tabs: User Roles & Bundles / Policy Bundles & Permissions */}
+                <div className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white p-1 shadow-2xs">
                   <button
-                    onClick={fetchDashboard}
-                    className="mt-6 rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-violet-600/20 transition hover:bg-violet-500"
+                    type="button"
+                    onClick={() => setDashboardTab("roles_bundles")}
+                    className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold transition ${
+                      dashboardTab === "roles_bundles"
+                        ? "bg-slate-900 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
                   >
-                    Call Dashboard API
-                  </button>
-                </section>
-
-          
-                  <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                        +
-                      </div>
-                      <div>
-                        <h2 className="font-semibold text-slate-900">
-                          User management
-                        </h2>
-                        <p className="mt-1 text-sm text-slate-500">
-                          Create users and view the fields assigned to your
-                          role.
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={openUserManagement}
-                      className="mt-6 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition hover:bg-blue-500"
+                    <span>User Roles & Bundles</span>
+                    <span
+                      className={`rounded-full px-2 py-0.2 text-[10px] font-bold ${
+                        dashboardTab === "roles_bundles"
+                          ? "bg-[#C81E1E] text-white"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
                     >
-                      Manage Users
-                    </button>
-                  </section>
-     
-                {/* View Permissions */}
-                <ViewPermissions permissions={data?.permissions} />
-
-                {/* Access Token */}
-                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                      ↻
-                    </div>
-
-                    <div>
-                      <h2 className="font-semibold text-slate-900">
-                        Access Token
-                      </h2>
-
-                      <p className="mt-1 text-sm text-slate-500">
-                        Generate a new access token using your refresh token.
-                      </p>
-                    </div>
-                  </div>
+                      g3
+                    </span>
+                  </button>
 
                   <button
-                    onClick={handleRefreshToken}
-                    disabled={refreshing}
-                    className="mt-6 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-slate-800 disabled:opacity-50"
+                    type="button"
+                    onClick={() => setDashboardTab("bundles_policies")}
+                    className={`flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-bold transition ${
+                      dashboardTab === "bundles_policies"
+                        ? "bg-slate-900 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
                   >
-                    {refreshing ? "Refreshing..." : "Refresh Access Token"}
+                    <span>Policy Bundles & Permissions</span>
+                    <span
+                      className={`rounded-full px-2 py-0.2 text-[10px] font-bold ${
+                        dashboardTab === "bundles_policies"
+                          ? "bg-[#C81E1E] text-white"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      p, p2, p3
+                    </span>
                   </button>
-                </section>
+                </div>
               </div>
 
               {/* ====================================================
-            Main grid
-        ==================================================== */}
+                  Dashboard Master-Detail Views
+              ==================================================== */}
+              {dashboardTab === "roles_bundles" ? (
+                <UserRolesBundlesDashboard />
+              ) : (
+                <PolicyBundlesPoliciesDashboard />
+              )}
 
-              <div className="mt-6 grid gap-6 lg:grid-cols-2">
-                {/* ==================================================
-              Test Logger
-          ================================================== */}
-
-                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-                      📝
-                    </div>
-
-                    <div>
-                      <h2 className="font-semibold text-slate-900">
-                        Test Logger
-                      </h2>
-
-                      <p className="mt-1 text-sm text-slate-500">
-                        Add a log with random severity level.
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={handleTestLogger}
-                    disabled={testLoggerLoading}
-                    className="mt-6 rounded-lg bg-amber-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-amber-600/20 transition hover:bg-amber-500 disabled:opacity-50"
+              {/* Collapsible Session & Developer Quick Tools */}
+              <div className="mt-8 border-t border-slate-200 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowSessionTools((prev) => !prev)}
+                  className="flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-800 transition"
+                >
+                  <svg
+                    className={`h-3.5 w-3.5 transition-transform ${
+                      showSessionTools ? "rotate-90" : ""
+                    }`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
                   >
-                    {testLoggerLoading ? "Testing..." : "Add Log Entry"}
-                  </button>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                  <span>API Session & Token Tools</span>
+                  <span className="rounded bg-slate-200 px-1.5 py-0.2 text-[10px] font-mono text-slate-600">
+                    Active Role: {selectedRole}
+                  </span>
+                </button>
 
-                  {/* Log Result Display */}
-                  {testLoggerData && (
-                    <div className="mt-6 space-y-3 border-t border-slate-100 pt-6">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold text-white ${
-                            testLoggerData.logSeverity === "info"
-                              ? "bg-blue-600"
-                              : testLoggerData.logSeverity === "debug"
-                                ? "bg-gray-600"
-                                : testLoggerData.logSeverity === "warn"
-                                  ? "bg-yellow-600"
-                                  : "bg-red-600"
-                          }`}
-                        >
-                          {testLoggerData.logSeverity.charAt(0).toUpperCase()}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-900">
-                            Log Severity
-                          </p>
-
-                          <p className="text-xs text-slate-500">
-                            {testLoggerData.logSeverity.toUpperCase()}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-4">
-                        <p className="text-xs font-medium text-slate-500">
-                          Status Code
+                {showSessionTools && (
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+                    <div className="flex flex-col justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">
+                          Refresh Access Token
                         </p>
-
-                        <span
-                          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
-                            testLoggerData.statusCode === 200 ||
-                            testLoggerData.statusCode === 202
-                              ? "bg-green-100 text-green-800"
-                              : "bg-orange-100 text-orange-800"
-                          }`}
-                        >
-                          {testLoggerData.statusCode}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-4">
-                        <p className="text-xs font-medium text-slate-500">
-                          Timestamp
-                        </p>
-
-                        <p className="truncate text-right text-xs font-mono text-slate-700">
-                          {new Date(
-                            testLoggerData.timestamp,
-                          ).toLocaleTimeString()}
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                          Issue a new session access token using refresh cookie.
                         </p>
                       </div>
-
-                      <div className="pt-2">
-                        <p className="text-xs font-medium text-slate-500">
-                          Message
-                        </p>
-
-                        <p className="mt-1 text-sm text-slate-700">
-                          {testLoggerData.message}
-                        </p>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRefreshToken}
+                        disabled={refreshing}
+                        className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 hover:bg-slate-100 disabled:opacity-50 transition"
+                      >
+                        {refreshing ? "Refreshing…" : "Refresh Token"}
+                      </button>
                     </div>
-                  )}
-                </section>
 
-                {/* ==================================================
-              Role selector
-          ================================================== */}
+                    <div className="flex flex-col justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">
+                          Reload Dashboard Session
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                          Re-fetch permission matrices and backend menus.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={fetchDashboard}
+                        className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 hover:bg-slate-100 transition"
+                      >
+                        Fetch /dashboard
+                      </button>
+                    </div>
 
-                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div>
-                    <h2 className="text-lg font-bold text-slate-900">
-                      Select Role
-                    </h2>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      Choose the role you want to continue with.
-                    </p>
+                    <div className="flex flex-col justify-between rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">
+                          Casbin Enforcer Checker
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                          Live permission evaluator testing tool.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => router.push("/admin/enforcer-checker")}
+                        className="mt-3 rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-800 transition"
+                      >
+                        Open Checker →
+                      </button>
+                    </div>
                   </div>
-
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                    {data?.currentRole?.map((role) => {
-                      const isSelected = selectedRole === role.role_id;
-
-                      const roleName =
-                        role.role_master?.role_name || "Unknown Role";
-
-                      return (
-                        <button
-                          key={role.user_role_mapping_id}
-                          onClick={() => handleRoleChange(role)}
-                          className={`rounded-xl border p-4 text-left transition ${
-                            isSelected
-                              ? "border-violet-500 bg-violet-50 ring-2 ring-violet-100"
-                              : "border-slate-200 bg-white hover:border-violet-300 hover:bg-slate-50"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`flex h-9 w-9 items-center justify-center rounded-lg text-sm font-bold ${
-                                isSelected
-                                  ? "bg-violet-600 text-white"
-                                  : "bg-slate-100 text-slate-600"
-                              }`}
-                            >
-                              {roleName.charAt(0).toUpperCase()}
-                            </div>
-
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold text-slate-900">
-                                {roleName}
-                              </p>
-
-                              <p className="mt-0.5 text-xs text-slate-500">
-                                Role ID: {role.role_id}
-                              </p>
-                            </div>
-                          </div>
-
-                          <p className="mt-4 text-xs text-slate-500">
-                            {role.role_master?.short_name || roleName}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Current role */}
-                  <div className="mt-6 border-t border-slate-100 pt-5">
-                    <p className="text-xs font-medium text-slate-400">
-                      Current Role
-                    </p>
-
-                    <p className="mt-1 text-sm font-semibold text-slate-800">
-                      {data?.currentRole?.find(
-                        (role) => role.role_id === selectedRole,
-                      )?.role_master?.role_name || "No role selected"}
-                    </p>
-                  </div>
-                </section>
-
-                {/* ==================================================
-              Current User
-          ================================================== */}
-
-                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-bold text-slate-900">
-                      Current User
-                    </h2>
-
-                    <button
-                      onClick={fetchDashboard}
-                      className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-500"
-                    >
-                      Refresh
-                    </button>
-                  </div>
-
-                  <div className="mt-5 divide-y divide-slate-100">
-                    <InfoRow label="NT ID" value={data?.user?.id || "-"} />
-
-                    <InfoRow
-                      label="Username"
-                      value={data?.user?.username || "-"}
-                    />
-
-                    <InfoRow
-                      label="Role"
-                      value={
-                        data?.currentRole?.find(
-                          (role) => role.role_id === selectedRole,
-                        )?.role_master?.role_name || "-"
-                      }
-                    />
-
-                    <InfoRow label="Role ID" value={selectedRole || "-"} />
-
-                    <InfoRow
-                      label="Role Mapping ID"
-                      value={
-                        data?.currentRole?.find(
-                          (role) => role.role_id === selectedRole,
-                        )?.user_role_mapping_id || "-"
-                      }
-                    />
-
-                    <InfoRow label="Token Type" value="access" />
-
-                    <InfoRow
-                      label="Active"
-                      value={
-                        data?.currentRole?.find(
-                          (role) => role.role_id === selectedRole,
-                        )?.is_active
-                          ? "Yes"
-                          : "No"
-                      }
-                    />
-                  </div>
-                </section>
+                )}
               </div>
             </>
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-// ============================================================
-// Reusable information row
-// ============================================================
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-6 py-3">
-      <span className="text-sm font-medium text-slate-500">{label}</span>
-
-      <span className="truncate text-right text-sm font-semibold text-slate-900">
-        {value}
-      </span>
     </div>
   );
 }
