@@ -25,21 +25,9 @@ interface PolicyDefinitionsModalProps {
 }
 
 function DefinitionFields({ def }: { def: PolicyDefinition }) {
-  if (def.ptype === "p2") {
+  if (def.ptype === "p") {
     return (
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-xs sm:grid-cols-3">
-        <div>
-          <dt className="font-semibold text-slate-400">LOB</dt>
-          <dd className="mt-0.5 font-bold uppercase text-slate-900">
-            {def.lob || "—"}
-          </dd>
-        </div>
-        <div>
-          <dt className="font-semibold text-slate-400">Parent Menu</dt>
-          <dd className="mt-0.5 font-medium text-slate-800">
-            {def.parent || "—"}
-          </dd>
-        </div>
         <div>
           <dt className="font-semibold text-slate-400">Display Name</dt>
           <dd className="mt-0.5 font-bold text-slate-900">
@@ -47,9 +35,21 @@ function DefinitionFields({ def }: { def: PolicyDefinition }) {
           </dd>
         </div>
         <div>
+          <dt className="font-semibold text-slate-400">Page / Container</dt>
+          <dd className="mt-0.5 font-medium text-slate-800">
+            {def.page || def.parent || "—"}
+          </dd>
+        </div>
+        <div>
           <dt className="font-semibold text-slate-400">Route</dt>
           <dd className="mt-0.5 font-mono text-slate-700">
             {def.route || "—"}
+          </dd>
+        </div>
+        <div>
+          <dt className="font-semibold text-slate-400">Icon</dt>
+          <dd className="mt-0.5 text-slate-700">
+            {def.icon || "—"}
           </dd>
         </div>
         <div>
@@ -159,14 +159,14 @@ export default function PolicyDefinitionsModal({
                     </span>
                     <span
                       className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${
-                        def.ptype === "p2"
+                        def.ptype === "p"
                           ? "bg-purple-100 text-purple-700"
-                          : def.ptype === "p3"
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-blue-100 text-blue-700"
+                          : def.ptype === "p2"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-amber-100 text-amber-800"
                       }`}
                     >
-                      Type: {def.ptype}
+                      Type: {def.ptype} ({def.ptype === "p" ? "Menu" : def.ptype === "p2" ? "Section" : "Field"})
                     </span>
                   </div>
                   <DefinitionFields def={def} />

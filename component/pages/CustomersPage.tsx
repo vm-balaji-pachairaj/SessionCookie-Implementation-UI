@@ -93,12 +93,12 @@ export default function CustomersPage({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-800">
-              Section: Customers
+            <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-800">
+              Menu: Sales
             </span>
             <span className="text-slate-300">•</span>
-            <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-800">
-              Menu: Customer Directory
+            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-800">
+              Section: Customers
             </span>
           </div>
           <h1 className="mt-2 text-2xl font-black text-slate-900 tracking-tight">

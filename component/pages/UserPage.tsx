@@ -6,6 +6,7 @@ import UserForm from "@/component/UserForm";
 import UserList from "@/component/UserList";
 import {
   hasPermission,
+  hasFieldPermission,
   type Permission,
   type FieldPermission,
 } from "@/lib/permissions";
@@ -41,27 +42,37 @@ export default function UserPage({
   const [view, setView] =
     useState<PageView>("home");
 
-  const canCreate = hasPermission(
-    permissions,
-    PERM_CREATE,
-  );
+  const hasUsersSection = hasPermission(permissions, "sec_user_users");
 
-  const canUpdate = hasPermission(
-    permissions,
-    PERM_UPDATE,
-  );
+  const canCreate =
+    hasPermission(permissions, PERM_CREATE) ||
+    hasFieldPermission(fieldPermissions, "field_user_create") ||
+    hasFieldPermission(fieldPermissions, "create") ||
+    hasUsersSection;
 
-  const canDeactivate = hasPermission(
-    permissions,
-    PERM_DEACTIVATE,
-  );
+  const canUpdate =
+    hasPermission(permissions, PERM_UPDATE) ||
+    hasFieldPermission(fieldPermissions, "field_user_update") ||
+    hasFieldPermission(fieldPermissions, "update") ||
+    hasUsersSection;
 
-  const canActivate = hasPermission(
-    permissions,
-    PERM_ACTIVATE,
-  );
+  const canDeactivate =
+    hasPermission(permissions, PERM_DEACTIVATE) ||
+    hasFieldPermission(fieldPermissions, "field_user_deactivate") ||
+    hasFieldPermission(fieldPermissions, "deactivate") ||
+    hasUsersSection;
 
-  const canList = hasPermission(permissions, PERM_LIST);
+  const canActivate =
+    hasPermission(permissions, PERM_ACTIVATE) ||
+    hasFieldPermission(fieldPermissions, "field_user_activate") ||
+    hasFieldPermission(fieldPermissions, "activate") ||
+    hasUsersSection;
+
+  const canList =
+    hasPermission(permissions, PERM_LIST) ||
+    hasFieldPermission(fieldPermissions, "field_user_list") ||
+    hasFieldPermission(fieldPermissions, "list") ||
+    hasUsersSection;
 
   function reset() {
     setView("home");

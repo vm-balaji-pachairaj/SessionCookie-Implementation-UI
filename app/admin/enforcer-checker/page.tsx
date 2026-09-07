@@ -214,7 +214,7 @@ export default function EnforcerCheckerPage() {
               Enforcer Checker
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Pick a role and a policy (P section, P2 menu, or P3 field), then verify
+              Pick a role and a resource (P menu, P2 section, or P3 field), then verify
               authorization evaluated through the role&apos;s assigned Policy Bundles
               (Role ──(g3)──&gt; Policy Bundle ──(g)──&gt; Policy).
             </p>
@@ -246,9 +246,9 @@ export default function EnforcerCheckerPage() {
               }`}
             >
               {t === "p"
-                ? "P (Permissions)"
+                ? "P (Menus)"
                 : t === "p2"
-                  ? "P2 (Menus)"
+                  ? "P2 (Sections)"
                   : "P3 (Fields)"}
             </button>
           ))}
@@ -311,15 +311,17 @@ export default function EnforcerCheckerPage() {
                 <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-xs text-white">
                   2
                 </span>
-                Select {ptypeFilter === "p2" ? "Menu" : "Permission"}
+                Select {ptypeFilter === "p" ? "Menu" : ptypeFilter === "p2" ? "Section" : "Field"}
               </h2>
               <input
                 value={permissionSearch}
                 onChange={(e) => setPermissionSearch(e.target.value)}
                 placeholder={
-                  ptypeFilter === "p2"
+                  ptypeFilter === "p"
                     ? "Search menus..."
-                    : "Search permissions..."
+                    : ptypeFilter === "p2"
+                      ? "Search sections..."
+                      : "Search fields..."
                 }
                 className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
               />
@@ -327,11 +329,11 @@ export default function EnforcerCheckerPage() {
             <div className="max-h-96 overflow-y-auto px-4 py-3">
               {loading ? (
                 <p className="py-8 text-center text-sm text-slate-500">
-                  Loading {ptypeFilter === "p2" ? "menus" : "permissions"}…
+                  Loading {ptypeFilter === "p" ? "menus" : ptypeFilter === "p2" ? "sections" : "fields"}…
                 </p>
               ) : filteredEntries.length === 0 ? (
                 <p className="py-8 text-center text-sm text-slate-500">
-                  No {ptypeFilter === "p2" ? "menus" : "permissions"} found.
+                  No {ptypeFilter === "p" ? "menus" : ptypeFilter === "p2" ? "sections" : "fields"} found.
                 </p>
               ) : (
                 <ul className="space-y-1.5">
@@ -356,10 +358,8 @@ export default function EnforcerCheckerPage() {
                             {entry.permission}
                           </span>
                           <span className="mt-1 block truncate text-[11px] text-slate-400">
-                            {entry.ptype === "p2"
-                              ? [entry.lob, entry.parent, entry.displayName]
-                                  .filter(Boolean)
-                                  .join(" / ")
+                            {entry.ptype === "p"
+                              ? [entry.displayName || entry.permission, entry.route].filter(Boolean).join(" · ")
                               : entry.ptype === "p3"
                                 ? [
                                     entry.lob,
@@ -407,7 +407,7 @@ export default function EnforcerCheckerPage() {
                 </span>
               </p>
               <p className="mt-1">
-                {ptypeFilter === "p2" ? "Menu" : "Permission"}:{" "}
+                {ptypeFilter === "p" ? "Menu" : ptypeFilter === "p2" ? "Section" : "Field"}:{" "}
                 <span className="font-mono text-xs font-semibold text-slate-900">
                   {selectedEntry?.permission ?? "—"}
                 </span>
@@ -452,7 +452,7 @@ export default function EnforcerCheckerPage() {
                     Evaluated via Centralized Enforcer (Role ──g3──&gt; Policy Bundle ──g──&gt; Policy)
                   </p>
                   <p className="text-xs text-slate-600 font-mono mt-1">
-                    {result.ptype === "p2" ? (
+                    {result.ptype === "p" ? (
                       <>
                         casbinService.enforce(&ldquo;{result.role}&rdquo;, &ldquo;
                         {result.key}&rdquo;)
@@ -484,7 +484,7 @@ export default function EnforcerCheckerPage() {
                     {result.role}
                   </dd>
                 </div>
-                {result.ptype === "p2" ? (
+                {result.ptype === "p" ? (
                   <div>
                     <dt className="text-xs text-slate-400">Menu Key</dt>
                     <dd className="font-medium text-slate-800">

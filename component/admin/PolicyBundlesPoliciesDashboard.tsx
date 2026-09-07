@@ -533,7 +533,7 @@ export default function PolicyBundlesPoliciesDashboard() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <span>All Permissions</span>
+              <span>All Policies</span>
               <span>All Policies (Audit Table)</span>
               <span
                 className={`rounded-full px-2 py-0.2 text-[10px] ${
@@ -556,7 +556,7 @@ export default function PolicyBundlesPoliciesDashboard() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <span>Section Access (p)</span>
+              <span>Menu Access (p)</span>
               <span
                 className={`rounded-full px-2 py-0.2 text-[10px] ${
                   activeTab === "p" ? "bg-white/20" : "bg-slate-300/80 text-slate-700"
@@ -578,7 +578,7 @@ export default function PolicyBundlesPoliciesDashboard() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
-              <span>Menu Access (p2)</span>
+              <span>Section Access (p2)</span>
               <span
                 className={`rounded-full px-2 py-0.2 text-[10px] ${
                   activeTab === "p2" ? "bg-white/20" : "bg-slate-300/80 text-slate-700"
@@ -721,18 +721,19 @@ export default function PolicyBundlesPoliciesDashboard() {
                     {activeTab === "all" && <th className="px-5 py-3.5">Type</th>}
                     {activeTab === "p" && (
                       <>
+                        <th className="px-5 py-3.5">Display Name</th>
+                        <th className="px-5 py-3.5">Route</th>
+                        <th className="px-5 py-3.5">Page</th>
+                        <th className="px-5 py-3.5">Order</th>
+                      </>
+                    )}
+                    {activeTab === "p2" && (
+                      <>
                         <th className="px-5 py-3.5">LOB</th>
                         <th className="px-5 py-3.5">Page</th>
                         <th className="px-5 py-3.5">Module</th>
                         <th className="px-5 py-3.5">Section</th>
                         <th className="px-5 py-3.5">Access</th>
-                      </>
-                    )}
-                    {activeTab === "p2" && (
-                      <>
-                        <th className="px-5 py-3.5">Parent</th>
-                        <th className="px-5 py-3.5">Display Name</th>
-                        <th className="px-5 py-3.5">Route</th>
                       </>
                     )}
                     {activeTab === "p3" && (
@@ -816,15 +817,16 @@ export default function PolicyBundlesPoliciesDashboard() {
                         {/* p Tab Columns */}
                         {activeTab === "p" && (
                           <>
-                            <td className="px-5 py-3.5 font-semibold uppercase text-slate-700">
-                              {p.lob || "—"}
+                            <td className="px-5 py-3.5 font-bold text-slate-900">
+                              {p.displayName || p.permission}
+                            </td>
+                            <td className="px-5 py-3.5 font-mono text-[11px] text-slate-500">
+                              {p.route || "—"}
                             </td>
                             <td className="px-5 py-3.5 text-slate-700">{p.page || "—"}</td>
-                            <td className="px-5 py-3.5 text-slate-700">{p.module || "—"}</td>
-                            <td className="px-5 py-3.5 text-slate-700">{p.section || "—"}</td>
                             <td className="px-5 py-3.5">
-                              <span className="rounded bg-slate-100 px-1.5 py-0.5 font-bold text-slate-800">
-                                {p.access || "—"}
+                              <span className="rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 font-bold text-amber-800">
+                                {p.order ?? "—"}
                               </span>
                             </td>
                           </>
@@ -833,12 +835,18 @@ export default function PolicyBundlesPoliciesDashboard() {
                         {/* p2 Tab Columns */}
                         {activeTab === "p2" && (
                           <>
-                            <td className="px-5 py-3.5 text-slate-700">{p.parent || "—"}</td>
-                            <td className="px-5 py-3.5 font-bold text-slate-900">
-                              {p.displayName || "—"}
+                            <td className="px-5 py-3.5 font-semibold uppercase text-slate-700">
+                              {p.lob || "—"}
                             </td>
-                            <td className="px-5 py-3.5 font-mono text-[11px] text-slate-500">
-                              {p.route || "—"}
+                            <td className="px-5 py-3.5 text-slate-700">{p.page || "—"}</td>
+                            <td className="px-5 py-3.5 text-slate-700">{p.module || "—"}</td>
+                            <td className="px-5 py-3.5 text-slate-700 font-medium">
+                              {p.section || "—"}
+                            </td>
+                            <td className="px-5 py-3.5">
+                              <span className="rounded bg-slate-100 px-1.5 py-0.5 font-bold text-slate-800">
+                                {p.access || "—"}
+                              </span>
                             </td>
                           </>
                         )}
@@ -847,7 +855,7 @@ export default function PolicyBundlesPoliciesDashboard() {
                         {activeTab === "p3" && (
                           <>
                             <td className="px-5 py-3.5 text-slate-700">
-                              {p.page} / {p.module}
+                              {p.page} / {p.module || p.section}
                             </td>
                             <td className="px-5 py-3.5 text-slate-700">{p.section || "—"}</td>
                             <td className="px-5 py-3.5 font-mono font-bold text-slate-900">
@@ -864,11 +872,11 @@ export default function PolicyBundlesPoliciesDashboard() {
                         {/* Target Details for All tab */}
                         {activeTab === "all" && (
                           <td className="px-5 py-3.5 text-slate-600 max-w-xs truncate">
-                            {p.ptype === "p2"
-                              ? `${p.displayName || ""} (${p.route || ""})`
+                            {p.ptype === "p"
+                              ? `${p.displayName || p.permission} (${p.route || ""})`
                               : p.ptype === "p3"
-                              ? `${p.page}/${p.module}/${p.section} • ${p.field} (${p.access})`
-                              : `${p.page}/${p.module}/${p.section} (${p.access})`}
+                              ? `${p.page}/${p.module || p.section} • ${p.field} (${p.access})`
+                              : `${p.page}/${p.module || p.section} (${p.access})`}
                           </td>
                         )}
 

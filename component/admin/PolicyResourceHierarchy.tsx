@@ -11,6 +11,20 @@ export interface HierarchyField {
   policy: string;
   policyName?: string;
   access: string;
+  sectionKey?: string;
+  menuKey?: string;
+}
+
+export interface HierarchySection {
+  key: string;
+  name: string;
+  displayName?: string;
+  policy: string;
+  policyName?: string;
+  access: string;
+  page?: string;
+  menuKey?: string;
+  fields: HierarchyField[];
 }
 
 export interface HierarchyMenu {
@@ -22,31 +36,27 @@ export interface HierarchyMenu {
   route: string;
   icon?: string;
   order: number;
-  fields: HierarchyField[];
-}
-
-export interface HierarchySection {
-  key: string;
-  name: string;
-  policy: string;
-  policyName?: string;
-  access: string;
-  menus: HierarchyMenu[];
+  sections: HierarchySection[];
+  // Backwards compatibility aliases during rollout
+  menus?: HierarchySection[];
+  fields?: HierarchyField[];
 }
 
 export type HierarchyMode = "create" | "view" | "edit" | "add" | "compact";
 
 export interface HierarchyCounts {
-  sections: number;
   menus: number;
+  sections: number;
   fields: number;
   total: number;
 }
 
 export interface PolicyResourceHierarchyProps {
   mode: HierarchyMode;
-  /** Provided sections. If omitted, will be fetched from GET /api/admin/resources */
-  sections?: HierarchySection[];
+  /** Provided menus. If omitted, will be fetched from GET /api/admin/resources */
+  menus?: HierarchyMenu[];
+  /** Backward compatibility alias for menus */
+  sections?: HierarchyMenu[];
   /** Set or Array of policy names that are currently selected or assigned */
   selectedPolicies?: Set<string> | string[];
   /** Policies that are already assigned (useful in 'add' mode to disable or flag them) */
@@ -79,7 +89,8 @@ export interface PolicyResourceHierarchyProps {
 
 export default function PolicyResourceHierarchy({
   mode,
-  sections: propSections,
+  menus: propMenusIn,
+  sections: propSectionsIn,
   selectedPolicies: propSelectedPolicies,
   assignedPolicies: propAssignedPolicies,
   onChange,
@@ -95,12 +106,14 @@ export default function PolicyResourceHierarchy({
   hideSummaryChips = false,
   hideToolbar = false,
 }: PolicyResourceHierarchyProps) {
+  const propMenus = propMenusIn || propSectionsIn;
+
   // 1. Data state
-  const [sections, setSections] = useState<HierarchySection[]>(propSections || []);
-  const [loading, setLoading] = useState<boolean>(!propSections || propSections.length === 0);
+  const [menus, setMenus] = useState<HierarchyMenu[]>(propMenus || []);
+  const [loading, setLoading] = useState<boolean>(!propMenus || propMenus.length === 0);
   const [error, setError] = useState<string>("");
 
-  // 2. Selection state (internal set synced with prop)
+  // 2. Selection state
   const normalizeSet = useCallback(
     (input?: Set<string> | string[]): Set<string> => {
       if (!input) return new Set<string>();
@@ -126,8 +139,8 @@ export default function PolicyResourceHierarchy({
   }, [propAssignedPolicies, normalizeSet]);
 
   // 3. Tree expansion state
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
   // 4. View mode filters
   const [viewOnlyAssigned, setViewOnlyAssigned] = useState<boolean>(
@@ -136,44 +149,52 @@ export default function PolicyResourceHierarchy({
   const [search, setSearch] = useState<string>("");
 
   // Helper getters for policy identifiers
-  const getSecPolicy = useCallback(
-    (s: HierarchySection) => s.policyName || s.policy,
+  const getMenuPolicy = useCallback(
+    (m: HierarchyMenu) => m.policyName || m.policy || m.key,
     []
   );
-  const getMenuPolicy = useCallback(
-    (m: HierarchyMenu) => m.policyName || m.policy,
+  const getSecPolicy = useCallback(
+    (s: HierarchySection) => s.policyName || s.policy || s.key,
     []
   );
   const getFieldPolicy = useCallback(
-    (f: HierarchyField) => f.policyName || f.policy,
+    (f: HierarchyField) => f.policyName || f.policy || f.key,
     []
   );
 
-  // Load sections from API if not provided via props
+  // Load menus from API if not provided via props
   const fetchHierarchy = useCallback(async () => {
-    if (propSections && propSections.length > 0) {
-      setSections(propSections);
-      setExpandedSections(new Set(propSections.map((s) => s.key)));
+    if (propMenus && propMenus.length > 0) {
+      const normalized = propMenus.map((m: any) => ({
+        ...m,
+        sections: m.sections || m.menus || [],
+      }));
+      setMenus(normalized);
+      setExpandedMenus(new Set(normalized.map((m) => m.key)));
       setLoading(false);
       return;
     }
     try {
       setLoading(true);
       setError("");
-      const res = await axios.get<{ sections: HierarchySection[] } | HierarchySection[]>(
-        `${ADMIN_API}/resources`
-      );
-      const data = Array.isArray(res.data) ? res.data : res.data.sections || [];
-      setSections(data);
-      // Auto-expand all sections
-      setExpandedSections(new Set(data.map((s) => s.key)));
+      const res = await axios.get<any>(`${ADMIN_API}/resources`);
+      const rawData = res.data;
+      const data: HierarchyMenu[] = Array.isArray(rawData)
+        ? rawData
+        : rawData.menus || rawData.sections || [];
+      const normalized = data.map((m: any) => ({
+        ...m,
+        sections: m.sections || m.menus || [],
+      }));
+      setMenus(normalized);
+      setExpandedMenus(new Set(normalized.map((m) => m.key)));
     } catch (err) {
       console.error("Failed to load resource hierarchy:", err);
       setError("Unable to load resource hierarchy from server.");
     } finally {
       setLoading(false);
     }
-  }, [propSections]);
+  }, [propMenus]);
 
   useEffect(() => {
     fetchHierarchy();
@@ -193,33 +214,37 @@ export default function PolicyResourceHierarchy({
     [onChange]
   );
 
-  // Cascading Selection Handlers
-  const toggleSection = (sec: HierarchySection) => {
+  // ============================================================
+  // Cascading Selection Handlers: Menu (P) -> Section (P2) -> Field (P3)
+  // ============================================================
+
+  // Level 1: Menu (P) Toggle
+  const toggleMenu = (menu: HierarchyMenu) => {
     if (mode === "view" || mode === "compact") return;
-    const secPolicy = getSecPolicy(sec);
-    if (mode === "add" && assignedSet.has(secPolicy)) return;
-    const isSelected = selectedPolicies.has(secPolicy);
+    const menuPolicy = getMenuPolicy(menu);
+    if (mode === "add" && assignedSet.has(menuPolicy)) return;
+    const isSelected = selectedPolicies.has(menuPolicy);
 
     updateSelection((prev) => {
       const next = new Set(prev);
       if (isSelected) {
-        // Deselect section -> remove section, its menus, and their fields
-        next.delete(secPolicy);
-        sec.menus.forEach((m) => {
-          const mp = getMenuPolicy(m);
-          if (mode !== "add" || !assignedSet.has(mp)) next.delete(mp);
-          m.fields.forEach((f) => {
+        // Deselect menu -> remove menu, its sections, and their fields
+        next.delete(menuPolicy);
+        menu.sections.forEach((s) => {
+          const sp = getSecPolicy(s);
+          if (mode !== "add" || !assignedSet.has(sp)) next.delete(sp);
+          s.fields.forEach((f) => {
             const fp = getFieldPolicy(f);
             if (mode !== "add" || !assignedSet.has(fp)) next.delete(fp);
           });
         });
       } else {
-        // Select section -> also auto-select child menus & fields
-        next.add(secPolicy);
-        sec.menus.forEach((m) => {
-          const mp = getMenuPolicy(m);
-          if (mode !== "add" || !assignedSet.has(mp)) next.add(mp);
-          m.fields.forEach((f) => {
+        // Select menu -> also auto-select child sections & fields
+        next.add(menuPolicy);
+        menu.sections.forEach((s) => {
+          const sp = getSecPolicy(s);
+          if (mode !== "add" || !assignedSet.has(sp)) next.add(sp);
+          s.fields.forEach((f) => {
             const fp = getFieldPolicy(f);
             if (mode !== "add" || !assignedSet.has(fp)) next.add(fp);
           });
@@ -228,47 +253,6 @@ export default function PolicyResourceHierarchy({
       return next;
     });
 
-    // Expand if selecting, collapse if deselecting
-    setExpandedSections((prev) => {
-      const next = new Set(prev);
-      if (isSelected) {
-        next.delete(sec.key);
-      } else {
-        next.add(sec.key);
-      }
-      return next;
-    });
-  };
-
-  const toggleMenu = (sec: HierarchySection, menu: HierarchyMenu) => {
-    if (mode === "view" || mode === "compact") return;
-    const secPolicy = getSecPolicy(sec);
-    const menuPolicy = getMenuPolicy(menu);
-    if (mode === "add" && assignedSet.has(menuPolicy)) return;
-    const isSelected = selectedPolicies.has(menuPolicy);
-
-    updateSelection((prev) => {
-      const next = new Set(prev);
-      if (isSelected) {
-        // Deselect menu -> remove menu and its fields
-        next.delete(menuPolicy);
-        menu.fields.forEach((f) => {
-          const fp = getFieldPolicy(f);
-          if (mode !== "add" || !assignedSet.has(fp)) next.delete(fp);
-        });
-      } else {
-        // Select menu -> ensure parent section is selected, and select its fields
-        if (mode !== "add" || !assignedSet.has(secPolicy)) next.add(secPolicy);
-        next.add(menuPolicy);
-        menu.fields.forEach((f) => {
-          const fp = getFieldPolicy(f);
-          if (mode !== "add" || !assignedSet.has(fp)) next.add(fp);
-        });
-      }
-      return next;
-    });
-
-    // Expand if selecting, collapse if deselecting
     setExpandedMenus((prev) => {
       const next = new Set(prev);
       if (isSelected) {
@@ -280,14 +264,55 @@ export default function PolicyResourceHierarchy({
     });
   };
 
+  // Level 2: Section (P2) Toggle
+  const toggleSection = (menu: HierarchyMenu, sec: HierarchySection) => {
+    if (mode === "view" || mode === "compact") return;
+    const menuPolicy = getMenuPolicy(menu);
+    const secPolicy = getSecPolicy(sec);
+    if (mode === "add" && assignedSet.has(secPolicy)) return;
+    const isSelected = selectedPolicies.has(secPolicy);
+
+    updateSelection((prev) => {
+      const next = new Set(prev);
+      if (isSelected) {
+        // Deselect section -> remove section and its fields
+        next.delete(secPolicy);
+        sec.fields.forEach((f) => {
+          const fp = getFieldPolicy(f);
+          if (mode !== "add" || !assignedSet.has(fp)) next.delete(fp);
+        });
+      } else {
+        // Select section -> auto-include parent Menu, and select child fields
+        if (mode !== "add" || !assignedSet.has(menuPolicy)) next.add(menuPolicy);
+        next.add(secPolicy);
+        sec.fields.forEach((f) => {
+          const fp = getFieldPolicy(f);
+          if (mode !== "add" || !assignedSet.has(fp)) next.add(fp);
+        });
+      }
+      return next;
+    });
+
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (isSelected) {
+        next.delete(sec.key);
+      } else {
+        next.add(sec.key);
+      }
+      return next;
+    });
+  };
+
+  // Level 3: Field (P3) Toggle
   const toggleField = (
-    sec: HierarchySection,
     menu: HierarchyMenu,
+    sec: HierarchySection,
     field: HierarchyField
   ) => {
     if (mode === "view" || mode === "compact") return;
-    const secPolicy = getSecPolicy(sec);
     const menuPolicy = getMenuPolicy(menu);
+    const secPolicy = getSecPolicy(sec);
     const fieldPolicy = getFieldPolicy(field);
     if (mode === "add" && assignedSet.has(fieldPolicy)) return;
     const isSelected = selectedPolicies.has(fieldPolicy);
@@ -295,11 +320,12 @@ export default function PolicyResourceHierarchy({
     updateSelection((prev) => {
       const next = new Set(prev);
       if (isSelected) {
+        // Deselect field -> remove field
         next.delete(fieldPolicy);
       } else {
-        // Select field -> ensure parent section and parent menu are selected!
-        if (mode !== "add" || !assignedSet.has(secPolicy)) next.add(secPolicy);
+        // Select field -> auto-include parent Section AND parent Menu!
         if (mode !== "add" || !assignedSet.has(menuPolicy)) next.add(menuPolicy);
+        if (mode !== "add" || !assignedSet.has(secPolicy)) next.add(secPolicy);
         next.add(fieldPolicy);
       }
       return next;
@@ -308,48 +334,39 @@ export default function PolicyResourceHierarchy({
 
   // Bulk expansion handlers
   const expandAll = () => {
-    setExpandedSections(new Set(sections.map((s) => s.key)));
-    const allMenus = new Set<string>();
-    sections.forEach((s) => s.menus.forEach((m) => allMenus.add(m.key)));
-    setExpandedMenus(allMenus);
+    setExpandedMenus(new Set(menus.map((m) => m.key)));
+    const allSecs = new Set<string>();
+    menus.forEach((m) => m.sections.forEach((s) => allSecs.add(s.key)));
+    setExpandedSections(allSecs);
   };
 
   const collapseAll = () => {
-    setExpandedSections(new Set());
     setExpandedMenus(new Set());
+    setExpandedSections(new Set());
   };
 
   const selectAll = () => {
     if (mode === "view" || mode === "compact") return;
     const all = new Set<string>();
-    sections.forEach((s) => {
-      const sp = getSecPolicy(s);
-      if (mode !== "add" || !assignedSet.has(sp)) all.add(sp);
-      s.menus.forEach((m) => {
-        const mp = getMenuPolicy(m);
-        if (mode !== "add" || !assignedSet.has(mp)) all.add(mp);
-        m.fields.forEach((f) => {
+    menus.forEach((m) => {
+      const mp = getMenuPolicy(m);
+      if (mode !== "add" || !assignedSet.has(mp)) all.add(mp);
+      m.sections.forEach((s) => {
+        const sp = getSecPolicy(s);
+        if (mode !== "add" || !assignedSet.has(sp)) all.add(sp);
+        s.fields.forEach((f) => {
           const fp = getFieldPolicy(f);
           if (mode !== "add" || !assignedSet.has(fp)) all.add(fp);
         });
       });
     });
     updateSelection(() => all);
-    setExpandedSections(new Set(sections.map((s) => s.key)));
+    setExpandedMenus(new Set(menus.map((m) => m.key)));
   };
 
   const clearAll = () => {
     if (mode === "view" || mode === "compact") return;
     updateSelection(() => new Set());
-  };
-
-  const toggleSectionExpand = (key: string) => {
-    setExpandedSections((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
   };
 
   const toggleMenuExpand = (key: string) => {
@@ -361,88 +378,97 @@ export default function PolicyResourceHierarchy({
     });
   };
 
+  const toggleSectionExpand = (key: string) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
   // Counts of total available items
-  const totalSections = sections.length;
-  const totalMenus = useMemo(
-    () => sections.reduce((acc, s) => acc + s.menus.length, 0),
-    [sections]
+  const totalMenus = menus.length;
+  const totalSections = useMemo(
+    () => menus.reduce((acc, m) => acc + m.sections.length, 0),
+    [menus]
   );
   const totalFields = useMemo(
     () =>
-      sections.reduce(
-        (acc, s) =>
-          acc + s.menus.reduce((mAcc, m) => mAcc + m.fields.length, 0),
+      menus.reduce(
+        (acc, m) =>
+          acc + m.sections.reduce((sAcc, s) => sAcc + s.fields.length, 0),
         0
       ),
-    [sections]
+    [menus]
   );
 
-  // Counts of selected/assigned items
-  const selectedSectionsCount = useMemo(
-    () => sections.filter((s) => selectedPolicies.has(getSecPolicy(s))).length,
-    [sections, selectedPolicies, getSecPolicy]
-  );
+  // Counts of selected items
   const selectedMenusCount = useMemo(
+    () => menus.filter((m) => selectedPolicies.has(getMenuPolicy(m))).length,
+    [menus, selectedPolicies, getMenuPolicy]
+  );
+  const selectedSectionsCount = useMemo(
     () =>
-      sections.reduce(
-        (acc, s) =>
+      menus.reduce(
+        (acc, m) =>
           acc +
-          s.menus.filter((m) => selectedPolicies.has(getMenuPolicy(m))).length,
+          m.sections.filter((s) => selectedPolicies.has(getSecPolicy(s))).length,
         0
       ),
-    [sections, selectedPolicies, getMenuPolicy]
+    [menus, selectedPolicies, getSecPolicy]
   );
   const selectedFieldsCount = useMemo(
     () =>
-      sections.reduce(
-        (acc, s) =>
+      menus.reduce(
+        (acc, m) =>
           acc +
-          s.menus.reduce(
-            (mAcc, m) =>
-              mAcc +
-              m.fields.filter((f) => selectedPolicies.has(getFieldPolicy(f)))
+          m.sections.reduce(
+            (sAcc, s) =>
+              sAcc +
+              s.fields.filter((f) => selectedPolicies.has(getFieldPolicy(f)))
                 .length,
             0
           ),
         0
       ),
-    [sections, selectedPolicies, getFieldPolicy]
+    [menus, selectedPolicies, getFieldPolicy]
   );
 
   useEffect(() => {
     if (onCountsChange) {
       onCountsChange({
-        sections: selectedSectionsCount,
         menus: selectedMenusCount,
+        sections: selectedSectionsCount,
         fields: selectedFieldsCount,
         total: selectedPolicies.size,
       });
     }
   }, [
     onCountsChange,
-    selectedSectionsCount,
     selectedMenusCount,
+    selectedSectionsCount,
     selectedFieldsCount,
     selectedPolicies.size,
   ]);
 
   // Filtered tree data based on search and viewOnlyAssigned
-  const visibleSections = useMemo(() => {
+  const visibleMenus = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return sections
-      .map((sec) => {
-        const secPolicy = getSecPolicy(sec);
-        const isSecSelected = selectedPolicies.has(secPolicy);
+    return menus
+      .map((menu) => {
+        const menuPolicy = getMenuPolicy(menu);
+        const isMenuSelected = selectedPolicies.has(menuPolicy);
 
-        // Menus filtering
-        const matchingMenus = sec.menus
-          .map((menu) => {
-            const menuPolicy = getMenuPolicy(menu);
-            const isMenuSelected = selectedPolicies.has(menuPolicy);
+        // Sections filtering
+        const matchingSections = menu.sections
+          .map((sec) => {
+            const secPolicy = getSecPolicy(sec);
+            const isSecSelected = selectedPolicies.has(secPolicy);
 
             // Fields filtering
-            const matchingFields = menu.fields.filter((f) => {
+            const matchingFields = sec.fields.filter((f) => {
               const fieldPolicy = getFieldPolicy(f);
               const isFieldSelected = selectedPolicies.has(fieldPolicy);
 
@@ -456,46 +482,46 @@ export default function PolicyResourceHierarchy({
             });
 
             if (viewOnlyAssigned) {
-              if (!isMenuSelected && matchingFields.length === 0) return null;
+              if (!isSecSelected && matchingFields.length === 0) return null;
             }
 
             if (q) {
-              const menuMatches =
-                (menu.displayName || menu.name).toLowerCase().includes(q) ||
-                menuPolicy.toLowerCase().includes(q) ||
-                menu.route.toLowerCase().includes(q);
+              const secMatches =
+                (sec.displayName || sec.name).toLowerCase().includes(q) ||
+                secPolicy.toLowerCase().includes(q);
 
-              if (!menuMatches && matchingFields.length === 0) return null;
+              if (!secMatches && matchingFields.length === 0) return null;
               return {
-                ...menu,
-                fields: menuMatches && !viewOnlyAssigned ? menu.fields : matchingFields,
+                ...sec,
+                fields: secMatches && !viewOnlyAssigned ? sec.fields : matchingFields,
               };
             }
 
-            return { ...menu, fields: matchingFields };
+            return { ...sec, fields: matchingFields };
           })
-          .filter(Boolean) as HierarchyMenu[];
+          .filter(Boolean) as HierarchySection[];
 
         if (viewOnlyAssigned) {
-          if (!isSecSelected && matchingMenus.length === 0) return null;
+          if (!isMenuSelected && matchingSections.length === 0) return null;
         }
 
         if (q) {
-          const secMatches =
-            sec.name.toLowerCase().includes(q) ||
-            secPolicy.toLowerCase().includes(q);
+          const menuMatches =
+            (menu.displayName || menu.name).toLowerCase().includes(q) ||
+            menuPolicy.toLowerCase().includes(q) ||
+            (menu.route && menu.route.toLowerCase().includes(q));
 
-          if (!secMatches && matchingMenus.length === 0) return null;
+          if (!menuMatches && matchingSections.length === 0) return null;
           return {
-            ...sec,
-            menus: secMatches && !viewOnlyAssigned ? sec.menus : matchingMenus,
+            ...menu,
+            sections: menuMatches && !viewOnlyAssigned ? menu.sections : matchingSections,
           };
         }
 
-        return { ...sec, menus: matchingMenus };
+        return { ...menu, sections: matchingSections };
       })
-      .filter(Boolean) as HierarchySection[];
-  }, [sections, search, viewOnlyAssigned, selectedPolicies, getSecPolicy, getMenuPolicy, getFieldPolicy]);
+      .filter(Boolean) as HierarchyMenu[];
+  }, [menus, search, viewOnlyAssigned, selectedPolicies, getMenuPolicy, getSecPolicy, getFieldPolicy]);
 
   // Handle Save
   const handleSave = async () => {
@@ -511,7 +537,7 @@ export default function PolicyResourceHierarchy({
     }
   };
 
-  // Compact Mode Render (for modals)
+  // Compact Mode Render (for modals/drawers)
   if (mode === "compact") {
     return (
       <div className={`space-y-3 font-sans ${className}`}>
@@ -527,11 +553,11 @@ export default function PolicyResourceHierarchy({
             </span>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] font-bold">
-            <span className="rounded-md bg-blue-100 px-2 py-0.5 text-blue-700">
-              {selectedSectionsCount} Sections
-            </span>
             <span className="rounded-md bg-purple-100 px-2 py-0.5 text-purple-700">
               {selectedMenusCount} Menus
+            </span>
+            <span className="rounded-md bg-blue-100 px-2 py-0.5 text-blue-700">
+              {selectedSectionsCount} Sections
             </span>
             <span className="rounded-md bg-amber-100 px-2 py-0.5 text-amber-800">
               {selectedFieldsCount} Fields
@@ -543,90 +569,90 @@ export default function PolicyResourceHierarchy({
         <div className="max-h-[60vh] overflow-y-auto space-y-2 pr-1">
           {loading ? (
             <p className="py-8 text-center text-xs text-slate-400">Loading resources…</p>
-          ) : visibleSections.length === 0 ? (
+          ) : visibleMenus.length === 0 ? (
             <p className="py-8 text-center text-xs text-slate-400 italic">
               No policies found in this bundle.
             </p>
           ) : (
-            visibleSections.map((sec) => {
-              const secPolicy = getSecPolicy(sec);
-              const isSecSelected = selectedPolicies.has(secPolicy);
-              const isSecExpanded = expandedSections.has(sec.key);
+            visibleMenus.map((menu) => {
+              const menuPolicy = getMenuPolicy(menu);
+              const isMenuSelected = selectedPolicies.has(menuPolicy);
+              const isMenuExpanded = expandedMenus.has(menu.key);
 
               return (
                 <div
-                  key={sec.key}
+                  key={menu.key}
                   className="rounded-xl border border-slate-200 bg-white overflow-hidden shadow-2xs"
                 >
-                  {/* Section Bar */}
+                  {/* Menu Bar */}
                   <div
-                    onClick={() => toggleSectionExpand(sec.key)}
+                    onClick={() => toggleMenuExpand(menu.key)}
                     className="flex cursor-pointer items-center justify-between gap-2 bg-[#F8FAFC] px-3.5 py-2 hover:bg-slate-100/80 transition"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-slate-400 text-[10px]">
-                        {isSecExpanded ? "▼" : "▶"}
+                        {isMenuExpanded ? "▼" : "▶"}
                       </span>
-                      <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[10px] font-bold text-blue-700 shrink-0">
-                        Section
+                      <span className="rounded bg-purple-100 px-1.5 py-0.2 text-[10px] font-bold text-purple-700 shrink-0">
+                        Menu (P)
                       </span>
                       <span className="text-xs font-bold text-slate-900 truncate">
-                        {sec.name}
+                        {menu.displayName || menu.name}
                       </span>
-                      <code className="font-mono text-[10px] text-slate-400 truncate hidden sm:inline">
-                        {secPolicy}
-                      </code>
+                      <span className="font-mono text-[10px] text-slate-400 truncate hidden sm:inline">
+                        {menu.route}
+                      </span>
                     </div>
-                    {isSecSelected && (
+                    {isMenuSelected && (
                       <span className="rounded-full bg-emerald-100 px-2 py-0.2 text-[10px] font-bold text-emerald-700 shrink-0">
                         ✓ Active
                       </span>
                     )}
                   </div>
 
-                  {/* Child Menus */}
-                  {isSecExpanded && (
+                  {/* Child Sections */}
+                  {isMenuExpanded && (
                     <div className="border-t border-slate-100 p-2.5 space-y-2 bg-white">
-                      {sec.menus.map((menu) => {
-                        const menuPolicy = getMenuPolicy(menu);
-                        const isMenuSelected = selectedPolicies.has(menuPolicy);
-                        const isMenuExpanded = expandedMenus.has(menu.key);
+                      {menu.sections.map((sec) => {
+                        const secPolicy = getSecPolicy(sec);
+                        const isSecSelected = selectedPolicies.has(secPolicy);
+                        const isSecExpanded = expandedSections.has(sec.key);
 
                         return (
                           <div
-                            key={menu.key}
+                            key={sec.key}
                             className="ml-3 rounded-lg border border-slate-200/80 bg-slate-50/50 overflow-hidden"
                           >
                             <div
-                              onClick={() => toggleMenuExpand(menu.key)}
+                              onClick={() => toggleSectionExpand(sec.key)}
                               className="flex cursor-pointer items-center justify-between gap-2 px-3 py-1.5 hover:bg-slate-100/60 transition"
                             >
                               <div className="flex items-center gap-2 min-w-0">
                                 <span className="text-slate-400 text-[9px]">
-                                  {isMenuExpanded ? "▼" : "▶"}
+                                  {isSecExpanded ? "▼" : "▶"}
                                 </span>
-                                <span className="rounded bg-purple-100 px-1.5 py-0.2 text-[9px] font-bold text-purple-700 shrink-0">
-                                  Menu
+                                <span className="rounded bg-blue-100 px-1.5 py-0.2 text-[9px] font-bold text-blue-700 shrink-0">
+                                  Section (P2)
                                 </span>
                                 <span className="text-xs font-semibold text-slate-800 truncate">
-                                  {menu.displayName || menu.name}
+                                  {sec.displayName || sec.name}
                                 </span>
                                 <span className="font-mono text-[10px] text-slate-400 hidden sm:inline">
-                                  {menu.route}
+                                  {secPolicy}
                                 </span>
                               </div>
-                              {isMenuSelected && (
-                                <span className="rounded-full bg-purple-50 border border-purple-200 px-2 py-0.2 text-[9px] font-bold text-purple-700 shrink-0">
+                              {isSecSelected && (
+                                <span className="rounded-full bg-blue-50 border border-blue-200 px-2 py-0.2 text-[9px] font-bold text-blue-700 shrink-0">
                                   Included
                                 </span>
                               )}
                             </div>
 
                             {/* Child Fields */}
-                            {isMenuExpanded && menu.fields.length > 0 && (
+                            {isSecExpanded && sec.fields.length > 0 && (
                               <div className="border-t border-slate-100 bg-white p-2">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                                  {menu.fields.map((f) => {
+                                  {sec.fields.map((f) => {
                                     const fieldPolicy = getFieldPolicy(f);
                                     const isFldSelected = selectedPolicies.has(fieldPolicy);
                                     return (
@@ -640,7 +666,7 @@ export default function PolicyResourceHierarchy({
                                       >
                                         <div className="flex items-center gap-1.5 min-w-0">
                                           <span className="rounded bg-amber-100 px-1 text-[9px] font-bold text-amber-800">
-                                            Field
+                                            Field (P3)
                                           </span>
                                           <span className="font-medium truncate">{f.name}</span>
                                         </div>
@@ -674,27 +700,27 @@ export default function PolicyResourceHierarchy({
       {/* ============================================================ */}
       {!hideSummaryChips && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-3">
-            <div className="text-[11px] font-bold uppercase tracking-wider text-blue-700">
-              Level 1: Sections (p)
-            </div>
-            <div className="mt-1 flex items-baseline gap-1.5">
-              <span className="text-lg font-black text-blue-900">
-                {selectedSectionsCount}
-              </span>
-              <span className="text-xs text-blue-600">/ {totalSections}</span>
-            </div>
-          </div>
-
           <div className="rounded-xl border border-purple-200 bg-purple-50/50 p-3">
             <div className="text-[11px] font-bold uppercase tracking-wider text-purple-700">
-              Level 2: Menus (p2)
+              Level 1: Menus (p)
             </div>
             <div className="mt-1 flex items-baseline gap-1.5">
               <span className="text-lg font-black text-purple-900">
                 {selectedMenusCount}
               </span>
               <span className="text-xs text-purple-600">/ {totalMenus}</span>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-3">
+            <div className="text-[11px] font-bold uppercase tracking-wider text-blue-700">
+              Level 2: Sections (p2)
+            </div>
+            <div className="mt-1 flex items-baseline gap-1.5">
+              <span className="text-lg font-black text-blue-900">
+                {selectedSectionsCount}
+              </span>
+              <span className="text-xs text-blue-600">/ {totalSections}</span>
             </div>
           </div>
 
@@ -719,7 +745,7 @@ export default function PolicyResourceHierarchy({
                 {selectedPolicies.size}
               </span>
               <span className="text-xs text-red-600">
-                / {totalSections + totalMenus + totalFields}
+                / {totalMenus + totalSections + totalFields}
               </span>
             </div>
           </div>
@@ -737,7 +763,7 @@ export default function PolicyResourceHierarchy({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by section, menu, field name, or policy code..."
+              placeholder="Search by menu, section, field name, or policy code..."
               className="w-full rounded-lg border border-slate-200 bg-slate-50/50 py-2 pl-9 pr-3 text-xs text-slate-800 placeholder-slate-400 outline-none transition focus:border-[#C81E1E] focus:bg-white focus:ring-1 focus:ring-[#C81E1E]"
             />
             <svg
@@ -884,47 +910,47 @@ export default function PolicyResourceHierarchy({
       )}
 
       {/* ============================================================ */}
-      {/* Cascading Tree List                                          */}
+      {/* Cascading Tree List: Menu (P) -> Section (P2) -> Field (P3)  */}
       {/* ============================================================ */}
       <div className="space-y-4 pt-1">
         {loading ? (
           <div className="py-12 text-center text-xs text-slate-400">
             Loading resource hierarchy…
           </div>
-        ) : visibleSections.length === 0 ? (
+        ) : visibleMenus.length === 0 ? (
           <div className="py-12 text-center text-xs text-slate-400">
             {viewOnlyAssigned
               ? "No assigned resources in this bundle. Click 'Show All Resources' or 'Edit Permissions' to configure."
               : "No resources match your search query."}
           </div>
         ) : (
-          visibleSections.map((section) => {
-            const secPolicy = getSecPolicy(section);
-            const isSecAssigned = mode === "add" && assignedSet.has(secPolicy);
-            const isSecSelected = selectedPolicies.has(secPolicy);
-            const isSecExpanded = expandedSections.has(section.key);
+          visibleMenus.map((menu) => {
+            const menuPolicy = getMenuPolicy(menu);
+            const isMenuAssigned = mode === "add" && assignedSet.has(menuPolicy);
+            const isMenuSelected = selectedPolicies.has(menuPolicy);
+            const isMenuExpanded = expandedMenus.has(menu.key);
 
             // Child stats
-            const childMenusCount = section.menus.length;
-            const selectedChildMenus = section.menus.filter((m) => {
-              const mp = getMenuPolicy(m);
-              return selectedPolicies.has(mp) || (mode === "add" && assignedSet.has(mp));
+            const childSectionsCount = menu.sections.length;
+            const selectedChildSections = menu.sections.filter((s) => {
+              const sp = getSecPolicy(s);
+              return selectedPolicies.has(sp) || (mode === "add" && assignedSet.has(sp));
             }).length;
 
             return (
               <div
-                key={section.key}
+                key={menu.key}
                 className={`rounded-xl border transition-all ${
-                  isSecSelected || isSecAssigned
-                    ? "border-blue-300 bg-blue-50/10 shadow-xs"
+                  isMenuSelected || isMenuAssigned
+                    ? "border-purple-300 bg-purple-50/10 shadow-xs"
                     : "border-slate-200 bg-white hover:border-slate-300"
                 }`}
               >
-                {/* Level 1: Section Header */}
+                {/* Level 1: Menu (P) Header */}
                 <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-[#F8FAFC]/80 rounded-t-xl">
                   <div className="flex items-center gap-3">
                     {mode === "view" ? (
-                      isSecSelected ? (
+                      isMenuSelected ? (
                         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xs font-black">
                           ✓
                         </span>
@@ -936,33 +962,38 @@ export default function PolicyResourceHierarchy({
                     ) : (
                       <input
                         type="checkbox"
-                        checked={isSecAssigned || isSecSelected}
-                        disabled={isSecAssigned}
-                        onChange={() => toggleSection(section)}
+                        checked={isMenuAssigned || isMenuSelected}
+                        disabled={isMenuAssigned}
+                        onChange={() => toggleMenu(menu)}
                         className="h-4 w-4 rounded border-slate-300 text-[#C81E1E] focus:ring-[#C81E1E] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                       />
                     )}
 
                     <button
                       type="button"
-                      onClick={() => toggleSectionExpand(section.key)}
+                      onClick={() => toggleMenuExpand(menu.key)}
                       className="flex items-center gap-2 text-left group"
                     >
                       <span className="text-slate-400 group-hover:text-slate-700 transition">
-                        {isSecExpanded ? "▼" : "▶"}
+                        {isMenuExpanded ? "▼" : "▶"}
                       </span>
                       <span className="text-sm font-bold text-slate-900">
-                        {section.name}
+                        {menu.displayName || menu.name}
                       </span>
                     </button>
 
-                    <span className="rounded bg-blue-100 px-2 py-0.5 text-[10px] font-bold text-blue-700">
-                      p (Section)
+                    <span className="rounded bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-700">
+                      Menu (P)
                     </span>
                     <code className="font-mono text-[11px] text-slate-500">
-                      {secPolicy}
+                      {menuPolicy}
                     </code>
-                    {isSecAssigned && (
+                    {menu.route && (
+                      <span className="text-[11px] text-slate-400 hidden sm:inline font-mono">
+                        {menu.route}
+                      </span>
+                    )}
+                    {isMenuAssigned && (
                       <span className="rounded bg-slate-200/80 px-2 py-0.5 text-[10px] font-bold text-slate-600">
                         Already in Bundle
                       </span>
@@ -971,53 +1002,53 @@ export default function PolicyResourceHierarchy({
 
                   <div className="flex items-center gap-3">
                     <span className="text-xs text-slate-500 font-medium">
-                      {selectedChildMenus} of {childMenusCount} Menus
+                      {selectedChildSections} of {childSectionsCount} Sections
                     </span>
                     <button
                       type="button"
-                      onClick={() => toggleSectionExpand(section.key)}
+                      onClick={() => toggleMenuExpand(menu.key)}
                       className="rounded-md border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-50 transition"
                     >
-                      {isSecExpanded ? "Collapse" : "Expand"}
+                      {isMenuExpanded ? "Collapse" : "Expand"}
                     </button>
                   </div>
                 </div>
 
-                {/* Level 2: Child Menus (Visible if expanded) */}
-                {isSecExpanded && (
+                {/* Level 2: Child Sections (Visible if menu expanded) */}
+                {isMenuExpanded && (
                   <div className="p-4 space-y-3 border-t border-slate-100">
-                    {section.menus.length === 0 ? (
+                    {menu.sections.length === 0 ? (
                       <p className="text-xs text-slate-400 italic">
-                        No menus in this section.
+                        No sections in this menu.
                       </p>
                     ) : (
-                      section.menus.map((menu) => {
-                        const menuPolicy = getMenuPolicy(menu);
-                        const isMenuAssigned = mode === "add" && assignedSet.has(menuPolicy);
-                        const isMenuSelected = selectedPolicies.has(menuPolicy);
-                        const isMenuExpanded = expandedMenus.has(menu.key);
+                      menu.sections.map((section) => {
+                        const secPolicy = getSecPolicy(section);
+                        const isSecAssigned = mode === "add" && assignedSet.has(secPolicy);
+                        const isSecSelected = selectedPolicies.has(secPolicy);
+                        const isSecExpanded = expandedSections.has(section.key);
 
-                        const childFieldsCount = menu.fields.length;
-                        const selectedChildFields = menu.fields.filter((f) => {
+                        const childFieldsCount = section.fields.length;
+                        const selectedChildFields = section.fields.filter((f) => {
                           const fp = getFieldPolicy(f);
                           return selectedPolicies.has(fp) || (mode === "add" && assignedSet.has(fp));
                         }).length;
 
                         return (
                           <div
-                            key={menu.key}
+                            key={section.key}
                             className={`ml-4 pl-4 border-l-2 rounded-lg transition-all ${
-                              isMenuSelected || isMenuAssigned
-                                ? "border-purple-400 bg-purple-50/20"
+                              isSecSelected || isSecAssigned
+                                ? "border-blue-400 bg-blue-50/20"
                                 : "border-slate-200 bg-slate-50/50"
                             }`}
                           >
-                            {/* Level 2: Menu Header */}
+                            {/* Level 2: Section Header */}
                             <div className="flex flex-wrap items-center justify-between gap-2 p-3">
                               <div className="flex items-center gap-3">
                                 {mode === "view" ? (
-                                  isMenuSelected ? (
-                                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold">
+                                  isSecSelected ? (
+                                    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">
                                       ✓
                                     </span>
                                   ) : (
@@ -1028,36 +1059,36 @@ export default function PolicyResourceHierarchy({
                                 ) : (
                                   <input
                                     type="checkbox"
-                                    checked={isMenuAssigned || isMenuSelected}
-                                    disabled={isMenuAssigned}
-                                    onChange={() => toggleMenu(section, menu)}
+                                    checked={isSecAssigned || isSecSelected}
+                                    disabled={isSecAssigned}
+                                    onChange={() => toggleSection(menu, section)}
                                     className="h-4 w-4 rounded border-slate-300 text-[#C81E1E] focus:ring-[#C81E1E] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                                   />
                                 )}
 
                                 <button
                                   type="button"
-                                  onClick={() => toggleMenuExpand(menu.key)}
+                                  onClick={() => toggleSectionExpand(section.key)}
                                   className="flex items-center gap-2 text-left group"
                                 >
                                   <span className="text-slate-400 group-hover:text-slate-700 text-xs">
-                                    {isMenuExpanded ? "▼" : "▶"}
+                                    {isSecExpanded ? "▼" : "▶"}
                                   </span>
                                   <span className="text-xs font-bold text-slate-800">
-                                    {menu.displayName || menu.name}
+                                    {section.displayName || section.name}
                                   </span>
                                 </button>
 
-                                <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-bold text-purple-700">
-                                  p2 (Menu)
+                                <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                                  Section (P2)
                                 </span>
                                 <code className="font-mono text-[11px] text-slate-500">
-                                  {menuPolicy}
+                                  {secPolicy}
                                 </code>
-                                <span className="text-[11px] text-slate-400">
-                                  {menu.route}
+                                <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[9px] font-mono uppercase text-slate-600">
+                                  {section.access || "read"}
                                 </span>
-                                {isMenuAssigned && (
+                                {isSecAssigned && (
                                   <span className="rounded bg-slate-200/80 px-1.5 py-0.2 text-[9px] font-bold text-slate-600">
                                     Already in Bundle
                                   </span>
@@ -1071,24 +1102,23 @@ export default function PolicyResourceHierarchy({
                                 {childFieldsCount > 0 && (
                                   <button
                                     type="button"
-                                    onClick={() => toggleMenuExpand(menu.key)}
+                                    onClick={() => toggleSectionExpand(section.key)}
                                     className="text-[11px] text-slate-600 hover:text-slate-900 underline"
                                   >
-                                    {isMenuExpanded ? "Hide Fields" : "Show Fields"}
+                                    {isSecExpanded ? "Hide Fields" : "Show Fields"}
                                   </button>
                                 )}
                               </div>
                             </div>
 
-                            {/* Level 3: Child Fields (Visible if menu expanded) */}
-                            {isMenuExpanded && menu.fields.length > 0 && (
+                            {/* Level 3: Child Fields (Visible if section expanded) */}
+                            {isSecExpanded && section.fields.length > 0 && (
                               <div className="p-3 pt-1">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                                  {menu.fields.map((field) => {
+                                  {section.fields.map((field) => {
                                     const fieldPolicy = getFieldPolicy(field);
                                     const isFldAssigned = mode === "add" && assignedSet.has(fieldPolicy);
-                                    const isFieldSelected =
-                                      selectedPolicies.has(fieldPolicy);
+                                    const isFieldSelected = selectedPolicies.has(fieldPolicy);
 
                                     return (
                                       <label
@@ -1119,7 +1149,7 @@ export default function PolicyResourceHierarchy({
                                             checked={isFldAssigned || isFieldSelected}
                                             disabled={isFldAssigned}
                                             onChange={() =>
-                                              toggleField(section, menu, field)
+                                              toggleField(menu, section, field)
                                             }
                                             className="h-3.5 w-3.5 rounded border-slate-300 text-[#C81E1E] focus:ring-[#C81E1E] disabled:opacity-60 disabled:cursor-not-allowed"
                                           />

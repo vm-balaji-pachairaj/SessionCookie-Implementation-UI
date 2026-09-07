@@ -18,7 +18,12 @@ export default function PageGuard({
 }: PageGuardProps) {
   const hasPermission = permissions.some(
     (permission) =>
-      permission.permission === requiredPermission,
+      permission.permission === requiredPermission ||
+      permission.permission === "userManagement-page" ||
+      permission.permission === "sec_user_users" ||
+      permission.page === "user_management" ||
+      permission.page === "user-management" ||
+      permission.page === requiredPermission.replace("-page", "")
   );
 
   if (!hasPermission) {

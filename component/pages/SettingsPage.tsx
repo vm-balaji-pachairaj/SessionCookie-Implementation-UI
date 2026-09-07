@@ -40,12 +40,12 @@ export default function SettingsPage({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-800">
-              Section: Settings
+            <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-800">
+              Menu: Settings
             </span>
             <span className="text-slate-300">•</span>
-            <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-800">
-              Menu: {activeKey === "access_control" ? "Access Control" : activeKey === "notifications" ? "Notifications" : "General Settings"}
+            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-800">
+              Section: {activeKey === "access_control" ? "Access Control" : activeKey === "notifications" ? "Notifications" : "General"}
             </span>
           </div>
           <h1 className="mt-2 text-2xl font-black text-slate-900 tracking-tight">

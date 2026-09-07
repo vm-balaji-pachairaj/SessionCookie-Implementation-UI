@@ -141,7 +141,7 @@ export default function AddPolicyToBundleModal({
                 {selectedToAdd.size} new policies selected
               </span>
             ) : (
-              <span>Select sections, menus, or fields above to add</span>
+              <span>Select menus, sections, or fields above to add</span>
             )}
           </div>
 
