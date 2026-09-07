@@ -64,10 +64,25 @@ export function getFieldMode(
   fallback: "edit" | "view" | "none" = "none"
 ): "edit" | "view" | "none" {
   const perm = fieldPermissions.find(
-    (p) => p.section === section && p.field === field
+    (p) => (p.section === section || p.module === section) && p.field === field
   );
   if (!perm) return fallback;
   if (perm.access === "edit") return "edit";
   if (perm.access === "view") return "view";
   return fallback;
 }
+
+/** Check if user role has access to a specific field by field name or policy name. */
+export function hasFieldPermission(
+  fieldPermissions: FieldPermission[],
+  fieldNameOrPolicy: string
+): boolean {
+  if (!fieldPermissions || fieldPermissions.length === 0) return false;
+  return fieldPermissions.some(
+    (p) =>
+      p.permission === fieldNameOrPolicy ||
+      p.field === fieldNameOrPolicy ||
+      p.permission.endsWith(`_${fieldNameOrPolicy}`)
+  );
+}
+

@@ -5,6 +5,7 @@ import axios from "axios";
 import AddPolicyBundleModal from "./AddPolicyBundleModal";
 import ConfirmDialog from "./ConfirmDialog";
 import PolicyDefinitionsModal, { PolicyDefinition } from "./PolicyDefinitionsModal";
+import PolicyResourceHierarchy from "./PolicyResourceHierarchy";
 
 const ADMIN_API = "http://localhost:5000/api/admin";
 
@@ -766,7 +767,7 @@ export default function UserRolesBundlesDashboard() {
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-2.5">
+            <div className="flex-1 overflow-y-auto p-6">
               {loadingInspectPolicies ? (
                 <p className="py-8 text-center text-xs text-slate-400">
                   Loading policies…
@@ -776,44 +777,12 @@ export default function UserRolesBundlesDashboard() {
                   No individual policies configured in this bundle.
                 </p>
               ) : (
-                inspectPolicies.map((p, idx) => (
-                  <div
-                    key={`${p.permission}-${idx}`}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/60 p-3 hover:bg-slate-50 transition"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-slate-900 truncate">
-                          {p.permission}
-                        </span>
-                        <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
-                            p.ptype === "p2"
-                              ? "bg-purple-100 text-purple-700"
-                              : p.ptype === "p3"
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-blue-100 text-blue-700"
-                          }`}
-                        >
-                          {p.ptype}
-                        </span>
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-500">
-                        {p.page && <span>Page: <strong>{p.page}</strong></span>}
-                        {p.module && <span>• Module: <strong>{p.module}</strong></span>}
-                        {p.section && <span>• Section: <strong>{p.section}</strong></span>}
-                        {p.field && <span>• Field: <strong>{p.field}</strong></span>}
-                        {p.displayName && <span>Menu: <strong>{p.displayName}</strong></span>}
-                      </div>
-                    </div>
-
-                    {p.access && (
-                      <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 shrink-0">
-                        • {p.access}
-                      </span>
-                    )}
-                  </div>
-                ))
+                <PolicyResourceHierarchy
+                  key={`inspect-${inspectBundle.id}-${inspectPolicies.length}`}
+                  mode="compact"
+                  selectedPolicies={inspectPolicies.map((p) => p.permission)}
+                  bundleName={inspectBundle.name}
+                />
               )}
             </div>
 

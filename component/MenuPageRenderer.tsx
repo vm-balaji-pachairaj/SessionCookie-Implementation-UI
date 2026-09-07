@@ -8,6 +8,10 @@ import UpdateUserPage from "@/component/pages/UpdateUserPage";
 import DeactivateUserPage from "@/component/pages/DeactivateUserPage";
 import ActivateUserPage from "@/component/pages/ActivateUserPage";
 import ReviewPendingPage from "@/component/pages/ReviewPendingPage";
+import SalesPage from "@/component/pages/SalesPage";
+import CustomersPage from "@/component/pages/CustomersPage";
+import ReportsPage from "@/component/pages/ReportsPage";
+import SettingsPage from "@/component/pages/SettingsPage";
 import PageGuard from "./pages/PageGaurd";
 
 interface Permission {
@@ -53,6 +57,34 @@ export function isDashboardHome(key: string): boolean {
   return DASHBOARD_NORM.has(normalize(key));
 }
 
+const SALES_NORM = new Set([
+  "sales",
+  "sales_dashboard",
+  "orders",
+  "sales_orders",
+]);
+
+const CUSTOMERS_NORM = new Set([
+  "customers",
+  "customer_list",
+  "customer_feedback",
+  "sales_customers",
+]);
+
+const REPORTS_NORM = new Set([
+  "reports",
+  "sales_report",
+  "user_activity",
+  "audit_report",
+]);
+
+const SETTINGS_NORM = new Set([
+  "settings",
+  "general_settings",
+  "access_control",
+  "notifications",
+]);
+
 const SEARCH_NORM = new Set([
   "search",
   "search_user",
@@ -64,6 +96,8 @@ const USER_NORM = new Set([
   "user_management",
   "initiate_new_user",
   "modify_user",
+  "roles",
+  "permissions",
 ]);
 
 const REVIEW_NORM = new Set([
@@ -90,6 +124,50 @@ export default function MenuPageRenderer({
 }: MenuPageRendererProps) {
   const key = normalize(activeKey);
   const menus = useSelector((state: RootState) => state.menu.menus);
+
+  // Sales pages (Orders & Sales Dashboard)
+  if (SALES_NORM.has(key)) {
+    return (
+      <SalesPage
+        activeKey={key}
+        permissions={permissions}
+        fieldPermissions={fieldPermissions}
+      />
+    );
+  }
+
+  // Customers pages
+  if (CUSTOMERS_NORM.has(key)) {
+    return (
+      <CustomersPage
+        activeKey={key}
+        permissions={permissions}
+        fieldPermissions={fieldPermissions}
+      />
+    );
+  }
+
+  // Reports pages (Sales & Audit)
+  if (REPORTS_NORM.has(key)) {
+    return (
+      <ReportsPage
+        activeKey={key}
+        permissions={permissions}
+        fieldPermissions={fieldPermissions}
+      />
+    );
+  }
+
+  // Settings pages
+  if (SETTINGS_NORM.has(key)) {
+    return (
+      <SettingsPage
+        activeKey={key}
+        permissions={permissions}
+        fieldPermissions={fieldPermissions}
+      />
+    );
+  }
 
   // Search page
   if (SEARCH_NORM.has(key)) {

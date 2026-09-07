@@ -11,6 +11,7 @@ import AddPolicyToBundleModal from "@/component/admin/AddPolicyToBundleModal";
 import AssignRoleToBundleModal from "@/component/admin/AssignRoleToBundleModal";
 import EditPolicyBundleModal from "@/component/admin/EditPolicyBundleModal";
 import ConfirmDialog from "@/component/admin/ConfirmDialog";
+import PolicyResourceHierarchy from "@/component/admin/PolicyResourceHierarchy";
 
 const ADMIN_API = "http://localhost:5000/api/admin";
 
@@ -38,6 +39,7 @@ interface BundlePolicy {
 }
 
 type PtypeFilter = "all" | "p" | "p2" | "p3";
+type BundleViewTab = "hierarchy" | "all" | "p" | "p2" | "p3";
 
 function describePolicy(p: BundlePolicy): string {
   if (p.ptype === "p2") {
@@ -70,6 +72,9 @@ export default function PolicyBundleDetailPage() {
 
   const [policySearch, setPolicySearch] = useState("");
   const [ptypeFilter, setPtypeFilter] = useState<PtypeFilter>("all");
+  const [activeTab, setActiveTab] = useState<BundleViewTab>("hierarchy");
+  const [isEditingHierarchy, setIsEditingHierarchy] = useState(false);
+  const [savingHierarchy, setSavingHierarchy] = useState(false);
 
   // Modals state
   const [showAddPolicy, setShowAddPolicy] = useState(false);
@@ -105,6 +110,7 @@ export default function PolicyBundleDetailPage() {
       ]);
       setBundle(bundleRes.data);
       setPolicies(policiesRes.data);
+      setIsEditingHierarchy(false);
     } catch (err) {
       console.error("Load bundle detail error:", err);
       setError("Unable to load policy bundle details.");
@@ -131,14 +137,39 @@ export default function PolicyBundleDetailPage() {
     [policies]
   );
 
+  const bundlePolicyNames = useMemo(
+    () => policies.map((p) => p.permission),
+    [policies]
+  );
+
+  const handleSaveHierarchy = async (newPolicyNames: string[]) => {
+    if (isNaN(bundleId)) return;
+    try {
+      setSavingHierarchy(true);
+      await axios.put(`${ADMIN_API}/policy-bundles/${bundleId}/policies`, {
+        policyNames: newPolicyNames,
+      });
+      setIsEditingHierarchy(false);
+      await loadData();
+    } catch (err) {
+      console.error("Save hierarchy error:", err);
+      setError("Failed to update bundle permissions.");
+    } finally {
+      setSavingHierarchy(false);
+    }
+  };
+
   const filteredPolicies = useMemo(
     () =>
       policies
-        .filter((p) => ptypeFilter === "all" || p.ptype === ptypeFilter)
+        .filter((p) => {
+          if (activeTab === "all" || activeTab === "hierarchy") return true;
+          return p.ptype === activeTab;
+        })
         .filter((p) =>
           p.permission.toLowerCase().includes(policySearch.toLowerCase())
         ),
-    [policies, policySearch, ptypeFilter]
+    [policies, policySearch, activeTab]
   );
 
   const handleViewDefinition = async (p: BundlePolicy) => {
@@ -366,119 +397,189 @@ export default function PolicyBundleDetailPage() {
               <div>
                 <h2 className="font-semibold text-slate-900">Bundle Policies</h2>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Individual policies grouped in this bundle (P, P2, and P3).
+                  Resource permissions grouped in this bundle (Section, Menu, and Field hierarchy).
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <div className="inline-flex items-center gap-1 rounded-lg bg-slate-100 p-1">
-                  {(["all", "p", "p2", "p3"] as const).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setPtypeFilter(t)}
-                      className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
-                        ptypeFilter === t
-                          ? "bg-white text-slate-900 shadow-sm"
-                          : "text-slate-500 hover:text-slate-800"
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("hierarchy")}
+                    className={`flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-bold transition ${
+                      activeTab === "hierarchy"
+                        ? "bg-[#C81E1E] text-white shadow-sm"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    <span>Hierarchy</span>
+                    <span
+                      className={`rounded-full px-1.5 text-[10px] ${
+                        activeTab === "hierarchy"
+                          ? "bg-white/20"
+                          : "bg-slate-200 text-slate-700"
                       }`}
                     >
-                      {t === "all" ? "All" : t.toUpperCase()}
-                    </button>
-                  ))}
+                      {policies.length}
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("all")}
+                    className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+                      activeTab === "all"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    All (Table)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("p")}
+                    className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+                      activeTab === "p"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    P ({pCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("p2")}
+                    className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+                      activeTab === "p2"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    P2 ({p2Count})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("p3")}
+                    className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
+                      activeTab === "p3"
+                        ? "bg-white text-slate-900 shadow-sm"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    P3 ({p3Count})
+                  </button>
                 </div>
-                <input
-                  value={policySearch}
-                  onChange={(e) => setPolicySearch(e.target.value)}
-                  placeholder="Search policies..."
-                  className="w-48 sm:w-64 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
-                />
+
+                {activeTab !== "hierarchy" && (
+                  <input
+                    value={policySearch}
+                    onChange={(e) => setPolicySearch(e.target.value)}
+                    placeholder="Search policies..."
+                    className="w-48 sm:w-64 rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 outline-none transition focus:border-[#C81E1E] focus:ring-1 focus:ring-[#C81E1E]"
+                  />
+                )}
+
                 <button
                   type="button"
                   onClick={() => setShowAddPolicy(true)}
-                  className="shrink-0 rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white shadow-sm shadow-violet-500/20 transition hover:bg-violet-500"
+                  className="shrink-0 rounded-lg bg-[#C81E1E] px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-[#B91C1C]"
                 >
                   + Add Policy
                 </button>
               </div>
             </div>
 
-            <div className="px-6 py-4">
-              {filteredPolicies.length === 0 ? (
-                <p className="py-8 text-center text-sm text-slate-500">
-                  No policies found in this bundle matching the criteria.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200">
-                        {["#", "Type", "Policy Name", "Details", "Actions"].map(
-                          (h) => (
-                            <th
-                              key={h}
-                              className="pb-3 pr-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-400"
-                            >
-                              {h}
-                            </th>
-                          )
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filteredPolicies.map((p, idx) => (
-                        <tr
-                          key={`${p.ptype}:${p.permission}`}
-                          className="hover:bg-slate-50"
-                        >
-                          <td className="py-3 pr-4 text-xs text-slate-400">
-                            {idx + 1}
-                          </td>
-                          <td className="py-3 pr-4">
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                p.ptype === "p2"
-                                  ? "bg-sky-50 text-sky-700"
-                                  : p.ptype === "p3"
-                                    ? "bg-amber-50 text-amber-700"
-                                    : "bg-violet-50 text-violet-700"
-                              }`}
-                            >
-                              {p.ptype.toUpperCase()}
-                            </span>
-                          </td>
-                          <td className="py-3 pr-4 max-w-[240px] truncate font-mono text-xs text-slate-700">
-                            {p.permission}
-                          </td>
-                          <td className="py-3 pr-4 text-slate-700 text-xs">
-                            {describePolicy(p)}
-                          </td>
-                          <td className="py-3 pr-2">
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleViewDefinition(p)}
-                                className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-violet-400 hover:text-violet-700"
+            {activeTab === "hierarchy" ? (
+              <div className="p-6">
+                <PolicyResourceHierarchy
+                  key={`${bundleId}-${isEditingHierarchy}-${bundlePolicyNames.length}`}
+                  mode={isEditingHierarchy ? "edit" : "view"}
+                  selectedPolicies={bundlePolicyNames}
+                  bundleName={bundle?.name}
+                  onStartEdit={() => setIsEditingHierarchy(true)}
+                  onCancel={() => setIsEditingHierarchy(false)}
+                  onSave={handleSaveHierarchy}
+                  isSaving={savingHierarchy}
+                />
+              </div>
+            ) : (
+              <div className="px-6 py-4">
+                {filteredPolicies.length === 0 ? (
+                  <p className="py-8 text-center text-sm text-slate-500">
+                    No policies found in this bundle matching the criteria.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200">
+                          {["#", "Type", "Policy Name", "Details", "Actions"].map(
+                            (h) => (
+                              <th
+                                key={h}
+                                className="pb-3 pr-4 text-left text-xs font-semibold uppercase tracking-wider text-slate-400"
                               >
-                                View Definition
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setRemovePolicyTarget(p.permission)
-                                }
-                                className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          </td>
+                                {h}
+                              </th>
+                            )
+                          )}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {filteredPolicies.map((p, idx) => (
+                          <tr
+                            key={`${p.ptype}:${p.permission}`}
+                            className="hover:bg-slate-50"
+                          >
+                            <td className="py-3 pr-4 text-xs text-slate-400">
+                              {idx + 1}
+                            </td>
+                            <td className="py-3 pr-4">
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                  p.ptype === "p2"
+                                    ? "bg-sky-50 text-sky-700"
+                                    : p.ptype === "p3"
+                                      ? "bg-amber-50 text-amber-700"
+                                      : "bg-violet-50 text-violet-700"
+                                }`}
+                              >
+                                {p.ptype.toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="py-3 pr-4 max-w-[240px] truncate font-mono text-xs text-slate-700">
+                              {p.permission}
+                            </td>
+                            <td className="py-3 pr-4 text-slate-700 text-xs">
+                              {describePolicy(p)}
+                            </td>
+                            <td className="py-3 pr-2">
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleViewDefinition(p)}
+                                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-[#C81E1E] hover:text-[#C81E1E]"
+                                >
+                                  View Definition
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setRemovePolicyTarget(p.permission)
+                                  }
+                                  className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </section>
         </div>
       </div>

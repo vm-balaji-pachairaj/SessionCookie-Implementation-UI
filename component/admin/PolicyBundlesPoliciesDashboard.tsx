@@ -7,6 +7,7 @@ import AddPolicyToBundleModal from "./AddPolicyToBundleModal";
 import CreatePolicyBundleModal from "./CreatePolicyBundleModal";
 import ConfirmDialog from "./ConfirmDialog";
 import PolicyDefinitionsModal, { PolicyDefinition } from "./PolicyDefinitionsModal";
+import PolicyResourceHierarchy from "./PolicyResourceHierarchy";
 
 const ADMIN_API = "http://localhost:5000/api/admin";
 
@@ -16,6 +17,11 @@ interface PolicyBundleSummary {
   description: string | null;
   policyCount: number;
   roleCount: number;
+  sectionCount?: number;
+  menuCount?: number;
+  fieldCount?: number;
+  status?: string;
+  assignedRoles?: string[];
   created_at?: string;
   updated_at?: string;
 }
@@ -36,6 +42,7 @@ interface BundlePolicy {
 }
 
 type PtypeTab = "all" | "p" | "p2" | "p3";
+type DashboardTab = "hierarchy" | "all" | "p" | "p2" | "p3";
 
 export default function PolicyBundlesPoliciesDashboard() {
   const router = useRouter();
@@ -48,7 +55,9 @@ export default function PolicyBundlesPoliciesDashboard() {
   const [policies, setPolicies] = useState<BundlePolicy[]>([]);
   const [loadingPolicies, setLoadingPolicies] = useState(false);
   const [policySearch, setPolicySearch] = useState("");
-  const [activeTab, setActiveTab] = useState<PtypeTab>("all");
+  const [activeTab, setActiveTab] = useState<DashboardTab>("hierarchy");
+  const [isEditingHierarchy, setIsEditingHierarchy] = useState(false);
+  const [savingHierarchy, setSavingHierarchy] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "assigned">("all");
 
   // Modals
@@ -113,6 +122,7 @@ export default function PolicyBundlesPoliciesDashboard() {
       );
       setPolicies(res.data);
       setCurrentPage(1);
+      setIsEditingHierarchy(false);
     } catch (err) {
       console.error("Load bundle policies error:", err);
       showToast("Unable to load policies for bundle", "error");
@@ -129,6 +139,30 @@ export default function PolicyBundlesPoliciesDashboard() {
     () => bundles.find((b) => b.id === selectedBundleId) || null,
     [bundles, selectedBundleId]
   );
+
+  const bundlePolicyNames = useMemo(
+    () => policies.map((p) => p.permission),
+    [policies]
+  );
+
+  const handleSaveHierarchy = async (newPolicyNames: string[]) => {
+    if (!selectedBundleId) return;
+    try {
+      setSavingHierarchy(true);
+      await axios.put(
+        `${ADMIN_API}/policy-bundles/${selectedBundleId}/policies`,
+        { policyNames: newPolicyNames }
+      );
+      showToast("Policy Bundle permissions updated successfully!");
+      setIsEditingHierarchy(false);
+      await Promise.all([loadBundlePolicies(), loadBundles()]);
+    } catch (err) {
+      console.error("Save hierarchy error:", err);
+      showToast("Failed to update bundle permissions", "error");
+    } finally {
+      setSavingHierarchy(false);
+    }
+  };
 
   // Filtered bundles for left column
   const filteredBundles = useMemo(() => {
@@ -252,11 +286,9 @@ export default function PolicyBundlesPoliciesDashboard() {
             </div>
             <button
               type="button"
-              onClick={() => setShowCreateBundleModal(true)}
               onClick={() => router.push("/admin/bundles/create")}
               className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-[#C81E1E] hover:bg-red-50 transition shadow-2xs shrink-0"
               title="Create new bundle"
-              title="Create new bundle (Single Page)"
             >
               + Create
             </button>
@@ -331,14 +363,41 @@ export default function PolicyBundlesPoliciesDashboard() {
                           {b.description}
                         </p>
                       )}
-                      <div className="mt-2 flex items-center gap-1.5">
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
                           {b.policyCount} {b.policyCount === 1 ? "policy" : "policies"}
                         </span>
+                        {typeof b.sectionCount === "number" && (
+                          <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-700">
+                            {b.sectionCount} sec
+                          </span>
+                        )}
+                        {typeof b.menuCount === "number" && (
+                          <span className="rounded-full bg-purple-50 px-1.5 py-0.5 text-[9px] font-bold text-purple-700">
+                            {b.menuCount} menus
+                          </span>
+                        )}
+                        {typeof b.fieldCount === "number" && (
+                          <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
+                            {b.fieldCount} fields
+                          </span>
+                        )}
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
                           {b.roleCount} {b.roleCount === 1 ? "role" : "roles"}
                         </span>
                       </div>
+                      {b.assignedRoles && b.assignedRoles.length > 0 && (
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {b.assignedRoles.map((role) => (
+                            <span
+                              key={role}
+                              className="rounded bg-slate-100 px-1.5 py-0.2 text-[9px] font-medium text-slate-600 truncate max-w-[140px]"
+                            >
+                              {role}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {isSelected && (
@@ -375,6 +434,30 @@ export default function PolicyBundlesPoliciesDashboard() {
                 {selectedBundle?.description ||
                   "Inspect and configure section, menu, and field permissions for this bundle."}
               </p>
+
+              {selectedBundle && (
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+                  <span className="rounded-md bg-slate-100 px-2 py-0.5 font-bold text-slate-800">
+                    {policies.length} Policies
+                  </span>
+                  <span>•</span>
+                  <span className="rounded-md bg-blue-50 px-2 py-0.5 font-bold text-blue-700">
+                    {pCount} Sections
+                  </span>
+                  <span>•</span>
+                  <span className="rounded-md bg-purple-50 px-2 py-0.5 font-bold text-purple-700">
+                    {p2Count} Menus
+                  </span>
+                  <span>•</span>
+                  <span className="rounded-md bg-amber-50 px-2 py-0.5 font-bold text-amber-800">
+                    {p3Count} Fields
+                  </span>
+                  <span>•</span>
+                  <span className="rounded-md bg-emerald-50 px-2 py-0.5 font-bold text-emerald-800">
+                    {selectedBundle.roleCount ?? selectedBundle.assignedRoles?.length ?? 0} Roles
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Primary Action Button in Crimson Red (Scan Tag Style) */}
@@ -402,7 +485,42 @@ export default function PolicyBundlesPoliciesDashboard() {
           </div>
 
           {/* Casbin RBAC Tabs: All, p (Section Access), p2 (Menu Access), p3 (Field Access) */}
+          {/* Casbin RBAC Tabs: Hierarchy (Default), All (Audit Table), p (Section Access), p2 (Menu Access), p3 (Field Access) */}
           <div className="flex items-center gap-2 overflow-x-auto rounded-xl bg-slate-200/60 p-1">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("hierarchy");
+              }}
+              className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition ${
+                activeTab === "hierarchy"
+                  ? "bg-[#C81E1E] text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <svg
+                className="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 6h16M4 12h16m-7 6h7"
+                />
+              </svg>
+              <span>Resource Hierarchy</span>
+              <span
+                className={`rounded-full px-2 py-0.2 text-[10px] ${
+                  activeTab === "hierarchy" ? "bg-white/20" : "bg-slate-300/80 text-slate-700"
+                }`}
+              >
+                {policies.length}
+              </span>
+            </button>
+
             <button
               type="button"
               onClick={() => {
@@ -416,6 +534,7 @@ export default function PolicyBundlesPoliciesDashboard() {
               }`}
             >
               <span>All Permissions</span>
+              <span>All Policies (Audit Table)</span>
               <span
                 className={`rounded-full px-2 py-0.2 text-[10px] ${
                   activeTab === "all" ? "bg-white/20" : "bg-slate-300/80 text-slate-700"
@@ -492,8 +611,24 @@ export default function PolicyBundlesPoliciesDashboard() {
             </button>
           </div>
 
-          {/* Action & Filter Bar (Scan Tag Style) */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-2xs">
+          {/* Main Content Pane: Resource Hierarchy (Default) vs Flat Audit Table */}
+          {activeTab === "hierarchy" ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+              <PolicyResourceHierarchy
+                key={`${selectedBundleId}-${isEditingHierarchy}-${bundlePolicyNames.length}`}
+                mode={isEditingHierarchy ? "edit" : "view"}
+                selectedPolicies={bundlePolicyNames}
+                bundleName={selectedBundle?.name}
+                onStartEdit={() => setIsEditingHierarchy(true)}
+                onCancel={() => setIsEditingHierarchy(false)}
+                onSave={handleSaveHierarchy}
+                isSaving={savingHierarchy}
+              />
+            </div>
+          ) : (
+            <>
+              {/* Action & Filter Bar (Scan Tag Style) */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-2xs">
             {/* Search Input */}
             <div className="relative flex-1 max-w-md">
               <input
@@ -865,6 +1000,8 @@ export default function PolicyBundlesPoliciesDashboard() {
               </div>
             </div>
           </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -892,7 +1029,7 @@ export default function PolicyBundlesPoliciesDashboard() {
         <AddPolicyToBundleModal
           bundleId={selectedBundle.id}
           bundleName={selectedBundle.name}
-          initialPtype={activeTab}
+          initialPtype={activeTab === "hierarchy" ? "all" : activeTab}
           onClose={() => setShowAddPolicyModal(false)}
           onAdded={async () => {
             setShowAddPolicyModal(false);
