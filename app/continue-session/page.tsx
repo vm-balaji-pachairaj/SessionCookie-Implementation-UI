@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest } from "../common";
+import { ShieldIcon } from "@/components/ui/Icons";
+import { Button } from "@/components/ui/Button";
 
 export default function ContinueSessionPage() {
   const router = useRouter();
@@ -83,63 +85,55 @@ export default function ContinueSessionPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+    <main className="min-h-screen bg-white flex items-center justify-center px-4 font-sans relative">
+      <div className="fixed inset-0 bg-neutral-900/20 backdrop-blur-xs" />
 
-      <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl border border-gray-100 p-8">
-        {/* Icon */}
-        <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50">
-          <svg
-            className="h-7 w-7 text-blue-600"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M12 9v3.75m0 3.75h.008M10.29 3.86l-7.04 12.18A2 2 0 005 19h14a2 2 0 001.75-2.96L13.71 3.86a2 2 0 00-3.42 0z"
-            />
-          </svg>
+      <div className="relative w-full max-w-md rounded-2xl bg-white p-8 shadow-xl border border-neutral-200">
+        {/* Brand Icon Header */}
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-neutral-100 text-[#C81E1E]">
+          <ShieldIcon size={24} />
         </div>
 
         {/* Heading */}
-        <h1 className="text-center text-2xl font-semibold text-gray-900">
-          Existing Session Found
+        <h1 className="text-center text-lg font-bold text-neutral-900">
+          Existing Session Detected
         </h1>
 
         {/* Message */}
-        <p className="mt-4 text-center text-sm leading-6 text-gray-600">
-          There is already a session available for this user. Do you want to
-          continue with the existing session here?
+        <p className="mt-2 text-center text-xs leading-relaxed text-neutral-500">
+          An active session is already associated with this account. Would you like to terminate older instances and continue here?
         </p>
 
         {error && (
-          <div className="mt-4 mb-2 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-600 text-center">
+          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700 text-center">
             {error}
           </div>
         )}
 
-        {/* Buttons */}
-        <div className="mt-8 flex gap-3">
-          <button
+        {/* Actions */}
+        <div className="mt-6 flex gap-3">
+          <Button
             type="button"
+            variant="secondary"
+            size="md"
             onClick={handleCancel}
             disabled={loading}
-            className="flex-1 rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-medium text-gray-700 transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 disabled:opacity-50"
+            className="flex-1"
           >
             Cancel
-          </button>
+          </Button>
 
-          <button
+          <Button
             type="button"
+            variant="primary"
+            size="md"
             onClick={handleContinue}
             disabled={loading}
-            className="flex-1 rounded-xl bg-blue-600 px-5 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+            isLoading={loading}
+            className="flex-1"
           >
-            {loading ? "Continuing..." : "Continue"}
-          </button>
+            Continue Session
+          </Button>
         </div>
       </div>
     </main>

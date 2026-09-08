@@ -1,75 +1,60 @@
 'use client';
 
-import { Container, Box, Tabs, Tab, Typography } from '@mui/material';
 import { useState } from 'react';
+import Link from 'next/link';
 import PubSubProducerComponent from '@/component/PubSubProducer';
 import PubSubSubscriberComponent from '@/component/PubSubSubscriber';
-
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`pubsub-tabpanel-${index}`}
-      aria-labelledby={`pubsub-tab-${index}`}
-      {...other}
-    >
-      {value === index && (
-        <Box sx={{ pt: 3 }}>
-          {children}
-        </Box>
-      )}
-    </div>
-  );
-}
-
-function a11yProps(index: number) {
-  return {
-    id: `pubsub-tab-${index}`,
-    'aria-controls': `pubsub-tabpanel-${index}`,
-  };
-}
+import { PaperPlaneIcon, ChevronLeftIcon } from '@/components/ui/Icons';
+import { Tabs } from '@/components/ui/Tabs';
 
 export default function PubSubPage() {
-  const [value, setValue] = useState(0);
-
-  const handleChange = (event: React.SyntheticEvent, newValue: number) => {
-    setValue(newValue);
-  };
+  const [activeTab, setActiveTab] = useState<'producer' | 'subscriber'>('producer');
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ width: '100%', pt: 4 }}>
-        <Typography variant="h3" sx={{ mb: 2, fontWeight: 'bold' }}>
-          🔄 Google Cloud Pub/Sub Demo
-        </Typography>
-        <Typography variant="body1" sx={{ mb: 3, color: 'text.secondary' }}>
-          Publish messages to Google Cloud Pub/Sub and consume them in real-time
-        </Typography>
+    <div className="min-h-screen bg-white font-sans text-neutral-900 px-4 sm:px-6 py-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-5">
+          <div>
+            <Link
+              href="/"
+              className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-900 transition"
+            >
+              <ChevronLeftIcon size={14} />
+              <span>Back to Home</span>
+            </Link>
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-100 text-[#C81E1E]">
+                <PaperPlaneIcon size={14} />
+              </div>
+              <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+                Google Cloud Pub/Sub Pipeline
+              </h1>
+            </div>
+            <p className="mt-1 text-xs text-neutral-500">
+              Publish messages to Cloud Pub/Sub topics and inspect subscriber consumption in real time.
+            </p>
+          </div>
 
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-          <Tabs value={value} onChange={handleChange} aria-label="pubsub tabs">
-            <Tab label="📨 Producer" {...a11yProps(0)} />
-            <Tab label="🔔 Subscriber" {...a11yProps(1)} />
-          </Tabs>
-        </Box>
+          <Tabs
+            items={[
+              { id: 'producer', label: 'Message Producer' },
+              { id: 'subscriber', label: 'Message Subscriber' },
+            ]}
+            activeId={activeTab}
+            onChange={(id) => setActiveTab(id as 'producer' | 'subscriber')}
+          />
+        </div>
 
-        <TabPanel value={value} index={0}>
-          <PubSubProducerComponent />
-        </TabPanel>
-
-        <TabPanel value={value} index={1}>
-          <PubSubSubscriberComponent />
-        </TabPanel>
-      </Box>
-    </Container>
+        {/* Tab Content */}
+        <div>
+          {activeTab === 'producer' ? (
+            <PubSubProducerComponent />
+          ) : (
+            <PubSubSubscriberComponent />
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

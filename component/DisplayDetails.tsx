@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RefreshIcon } from "@/components/ui/Icons";
+import { Button } from "@/components/ui/Button";
 
 type TokenData = {
   sub?: string | number;
@@ -53,112 +55,59 @@ export default function CurrentUserToken() {
     }
 
     fetchCurrentUser();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [refreshTick]);
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: "600px",
-        margin: "20px auto",
-        padding: "0 24px",
-        boxSizing: "border-box",
-      }}
-    >
-      <div
-        style={{
-          border: "1px solid #ddd",
-          borderRadius: "10px",
-          padding: "24px",
-          backgroundColor: "#fff",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
-        }}
-      >
+    <div className="w-full max-w-xl mx-auto my-6 px-4">
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs">
         {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "20px",
-          }}
-        >
-          <h3
-            style={{
-              margin: 0,
-              fontSize: "20px",
-              fontWeight: 600,
-            }}
-          >
-            Current User
-          </h3>
+        <div className="flex items-center justify-between border-b border-neutral-100 pb-4 mb-4">
+          <div>
+            <h3 className="text-sm font-bold text-neutral-900 tracking-tight">
+              Active Token Session
+            </h3>
+            <p className="text-xs text-neutral-500">
+              Decoded claims from your HttpOnly cookie
+            </p>
+          </div>
 
-          <button
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={() => setRefreshTick((t) => t + 1)}
             disabled={loading}
-            style={{
-              padding: "8px 16px",
-              border: "none",
-              borderRadius: "6px",
-              backgroundColor: loading ? "#aaa" : "#1976d2",
-              color: "#fff",
-              cursor: loading ? "not-allowed" : "pointer",
-              fontSize: "14px",
-            }}
+            isLoading={loading}
+            leftIcon={<RefreshIcon size={14} />}
           >
-            {loading ? "Refreshing..." : "Refresh"}
-          </button>
+            Refresh
+          </Button>
         </div>
 
-        {/* Loading */}
+        {/* Content */}
         {loading && !tokenData ? (
-          <div
-            style={{
-              padding: "20px 0",
-              textAlign: "center",
-              color: "#666",
-            }}
-          >
-            Loading...
+          <div className="py-8 text-center text-xs text-neutral-400">
+            Fetching session token claims…
           </div>
         ) : !tokenData ? (
-          <div
-            style={{
-              padding: "20px 0",
-              textAlign: "center",
-              color: "#d32f2f",
-            }}
-          >
-            No user information found
+          <div className="py-8 text-center text-xs text-red-500">
+            No active session token found
           </div>
         ) : (
-          <div>
-            <InfoRow label="User ID" value={tokenData.sub} />
-
+          <div className="divide-y divide-neutral-100 text-xs">
+            <InfoRow label="Subject (User ID)" value={tokenData.sub} />
             <InfoRow label="Username" value={tokenData.username} />
-
             <InfoRow label="NT ID" value={tokenData.userDetails?.nt_id} />
-
             <InfoRow label="Role" value={tokenData.userDetails?.role_name} />
-
-            <InfoRow
-              label="Short Name"
-              value={tokenData.userDetails?.short_name}
-            />
-
+            <InfoRow label="Short Name" value={tokenData.userDetails?.short_name} />
             <InfoRow label="Role ID" value={tokenData.role_id} />
-
-            <InfoRow
-              label="Role Mapping ID"
-              value={tokenData.user_role_mapping_id}
-            />
-
+            <InfoRow label="Role Mapping ID" value={tokenData.user_role_mapping_id} />
             <InfoRow label="Token Type" value={tokenData.type} />
-
             <InfoRow
-              label="Active"
-              value={tokenData.userDetails?.is_active ? "Yes" : "No"}
+              label="Active Status"
+              value={tokenData.userDetails?.is_active ? "Active" : "Inactive"}
             />
           </div>
         )}
@@ -169,32 +118,11 @@ export default function CurrentUserToken() {
 
 function InfoRow({ label, value }: { label: string; value?: string | number }) {
   return (
-    <div
-      style={{
-        display: "flex",
-        padding: "10px 0",
-        borderBottom: "1px solid #eee",
-      }}
-    >
-      <div
-        style={{
-          width: "180px",
-          fontWeight: 600,
-          color: "#555",
-        }}
-      >
-        {label}
-      </div>
-
-      <div
-        style={{
-          flex: 1,
-          color: "#222",
-          wordBreak: "break-word",
-        }}
-      >
-        {value ?? "-"}
-      </div>
+    <div className="flex items-center justify-between py-2.5">
+      <span className="font-semibold text-neutral-500">{label}</span>
+      <span className="font-mono text-neutral-800 font-medium">
+        {value ?? "—"}
+      </span>
     </div>
   );
 }

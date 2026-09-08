@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 
 interface Permission {
   permission: string;
@@ -64,14 +66,9 @@ const STUB_ITEMS: PendingItem[] = [
   },
 ];
 
-const TYPE_COLORS: Record<RequestType, string> = {
-  "New User":    "bg-blue-50 text-blue-700",
-  "Update Role": "bg-amber-50 text-amber-700",
-  "Deactivate":  "bg-red-50 text-red-600",
-  "Activate":    "bg-emerald-50 text-emerald-700",
-};
-
-export default function ReviewPendingPage({ permissions }: ReviewPendingPageProps) {
+export default function ReviewPendingPage({
+  permissions,
+}: ReviewPendingPageProps) {
   const [items, setItems] = useState<PendingItem[]>(STUB_ITEMS);
   const [reviewedId, setReviewedId] = useState<string | null>(null);
 
@@ -84,99 +81,107 @@ export default function ReviewPendingPage({ permissions }: ReviewPendingPageProp
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600">
-          User Management
+      {/* Header */}
+      <div className="border-b border-neutral-100 pb-5">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+          User Operations
         </p>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900">
-          Review Pending
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-neutral-900">
+          Review Pending Requests
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Approve or reject pending user requests.
+        <p className="mt-0.5 text-xs text-neutral-500">
+          Approve or reject pending access and lifecycle requests.
         </p>
       </div>
 
       {/* Success toast */}
       {reviewedId && (
-        <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3 text-xs font-semibold text-neutral-700">
           ✓ Request {reviewedId} has been processed.
         </div>
       )}
 
-      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-900">Pending Requests</h2>
-          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+      <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xs">
+        <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
+          <h2 className="text-sm font-bold text-neutral-900">
+            Pending Queue
+          </h2>
+          <Badge variant="neutral" dot>
             {items.length} pending
-          </span>
+          </Badge>
         </div>
 
         {items.length === 0 ? (
-          <p className="px-6 py-12 text-center text-sm text-slate-400">
-            No pending requests.
+          <p className="px-6 py-12 text-center text-xs text-neutral-400">
+            No pending requests awaiting approval.
           </p>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50">
-                {["Request ID", "NT ID", "Name", "Type", "Requested By", "Date", "Actions"].map(
-                  (h) => (
-                    <th
-                      key={h}
-                      className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400"
-                    >
-                      {h}
-                    </th>
-                  )
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {items.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50">
-                  <td className="px-5 py-4 font-mono text-xs text-slate-500">
-                    {item.id}
-                  </td>
-                  <td className="px-5 py-4 font-mono text-xs text-slate-600">
-                    {item.ntId}
-                  </td>
-                  <td className="px-5 py-4 font-medium text-slate-800">
-                    {item.name}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${TYPE_COLORS[item.type]}`}
-                    >
-                      {item.type}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 text-slate-600">{item.requestedBy}</td>
-                  <td className="px-5 py-4 text-slate-500 text-xs">{item.date}</td>
-                  <td className="px-5 py-4">
-                    {canReview ? (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleAction(item.id, "approve")}
-                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-500"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleAction(item.id, "reject")}
-                          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-slate-400">No access</span>
-                    )}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-xs text-left">
+              <thead>
+                <tr className="border-b border-neutral-100 bg-neutral-50 text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+                  <th className="px-5 py-3.5">Request ID</th>
+                  <th className="px-5 py-3.5">NT ID</th>
+                  <th className="px-5 py-3.5">Name</th>
+                  <th className="px-5 py-3.5">Type</th>
+                  <th className="px-5 py-3.5">Requested By</th>
+                  <th className="px-5 py-3.5">Date</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-neutral-100">
+                {items.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="hover:bg-neutral-50/70 transition-colors"
+                  >
+                    <td className="px-5 py-4 font-mono font-semibold text-neutral-900">
+                      {item.id}
+                    </td>
+                    <td className="px-5 py-4 font-mono text-neutral-600">
+                      {item.ntId}
+                    </td>
+                    <td className="px-5 py-4 font-bold text-neutral-800">
+                      {item.name}
+                    </td>
+                    <td className="px-5 py-4">
+                      <Badge variant="neutral">{item.type}</Badge>
+                    </td>
+                    <td className="px-5 py-4 text-neutral-600">
+                      {item.requestedBy}
+                    </td>
+                    <td className="px-5 py-4 text-neutral-500 font-mono text-[11px]">
+                      {item.date}
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      {canReview ? (
+                        <div className="inline-flex items-center gap-1.5">
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleAction(item.id, "approve")}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleAction(item.id, "reject")}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-neutral-400">
+                          Review access restricted
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>

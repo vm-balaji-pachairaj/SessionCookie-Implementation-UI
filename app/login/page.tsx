@@ -3,13 +3,14 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "../common";
+import { ShieldIcon } from "@/components/ui/Icons";
+import { Button } from "@/components/ui/Button";
 
 export default function LoginPage() {
   const router = useRouter();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -31,13 +32,7 @@ export default function LoginPage() {
         password,
       });
 
-      // Backend sets:
-      // access_token
-      // refresh_token
-      //
-      // Both are HttpOnly cookies.
-
-      // Clear any pending credentials (cleanup) and continue
+      // Backend sets access_token and refresh_token in HttpOnly cookies.
       if (typeof window !== "undefined") {
         sessionStorage.removeItem("pending_login_credentials");
       }
@@ -45,13 +40,13 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Login error:", error);
-      console.error("Error response:", error?.response);
-      console.error("Error code:", error?.code);
-      console.error("Error message:", error?.message);
 
       // Network error - backend not reachable
-      if (error?.code === 'ERR_NETWORK' || (error?.message && error.message.includes('Network Error'))) {
-        const backendUrl = 'http://localhost:5000';
+      if (
+        error?.code === "ERR_NETWORK" ||
+        (error?.message && error.message.includes("Network Error"))
+      ) {
+        const backendUrl = "http://localhost:5000";
         setError(
           `Unable to connect to backend API at ${backendUrl}. ` +
           'Make sure the backend server is running with "npm run start:dev" from the api folder.'
@@ -64,7 +59,6 @@ export default function LoginPage() {
         error?.response?.status === 409 &&
         error?.response?.data?.code === "USER_ALREADY_LOGGED_IN"
       ) {
-        // Save credentials temporarily so the continue flow can post them.
         if (typeof window !== "undefined") {
           try {
             sessionStorage.setItem(
@@ -91,82 +85,77 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 flex items-center justify-center px-6">
-      <div className="w-full max-w-md">
-        {/* Login Card */}
-        <div className="rounded-2xl border border-white/10 bg-slate-800/80 backdrop-blur-xl shadow-2xl p-8">
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
-              <span className="text-white text-xl font-bold">L</span>
+    <main className="min-h-screen bg-white flex flex-col items-center justify-center px-4 py-12 font-sans">
+      <div className="w-full max-w-sm">
+        {/* Main Login Card */}
+        <div className="rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
+          {/* Brand Icon Header with Theme Color (#C81E1E) */}
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#C81E1E] text-white shadow-2xs mb-3">
+              <ShieldIcon size={22} />
             </div>
-          </div>
-
-          {/* Heading */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white">Welcome back</h1>
-
-            <p className="mt-2 text-sm text-slate-400">
-              Sign in to your account to continue
+            <h1 className="text-xl font-bold text-neutral-900 tracking-tight">
+              Portal Sign In
+            </h1>
+            <p className="mt-1 text-xs text-neutral-500">
+              Enter your credentials to access your session
             </p>
           </div>
 
-          {/* Error */}
+          {/* Error notice */}
           {error && (
-            <div className="mb-5 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            <div className="mb-5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700 leading-relaxed">
               {error}
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-5">
-            {/* Username */}
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-200">
+              <label className="mb-1.5 block text-xs font-semibold text-neutral-700">
                 Username
               </label>
-
               <input
                 type="text"
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
-                placeholder="Enter your username"
+                placeholder="e.g. admin or alice"
                 autoComplete="username"
                 disabled={loading}
-                className="w-full rounded-lg border border-slate-600 bg-slate-700/60 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 disabled:opacity-50"
+                className="w-full rounded-lg border border-neutral-200 bg-neutral-50/50 px-3.5 py-2.5 text-xs text-neutral-900 placeholder-neutral-400 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-1 focus:ring-neutral-400 disabled:opacity-50"
               />
             </div>
 
-            {/* Password */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-200">
+              <label className="mb-1.5 block text-xs font-semibold text-neutral-700">
                 Password
               </label>
-
               <input
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                placeholder="Enter your password"
+                placeholder="Enter password"
                 autoComplete="current-password"
                 disabled={loading}
-                className="w-full rounded-lg border border-slate-600 bg-slate-700/60 px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 disabled:opacity-50"
+                className="w-full rounded-lg border border-neutral-200 bg-neutral-50/50 px-3.5 py-2.5 text-xs text-neutral-900 placeholder-neutral-400 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-1 focus:ring-neutral-400 disabled:opacity-50"
               />
             </div>
 
-            {/* Login */}
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              className="w-full rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 py-3 text-sm font-semibold text-white shadow-lg shadow-violet-600/20 transition hover:from-violet-500 hover:to-indigo-500 focus:outline-none focus:ring-2 focus:ring-violet-500/40 disabled:cursor-not-allowed disabled:opacity-50"
+              variant="primary"
+              size="lg"
+              isLoading={loading}
+              className="w-full mt-2"
             >
-              {loading ? "Signing in..." : "Sign in"}
-            </button>
+              Sign In
+            </Button>
           </form>
 
-          {/* Footer */}
-          <div className="mt-7 text-center">
-            <p className="text-xs text-slate-500">Secure authentication</p>
+          <div className="mt-6 border-t border-neutral-100 pt-4 text-center">
+            <p className="text-[11px] text-neutral-400">
+              HttpOnly Session Cookies • Casbin Authorization
+            </p>
           </div>
         </div>
       </div>

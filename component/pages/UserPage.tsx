@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import UserForm from "@/component/UserForm";
 import UserList from "@/component/UserList";
@@ -10,21 +10,21 @@ import {
   type Permission,
   type FieldPermission,
 } from "@/lib/permissions";
+import {
+  PlusSquareIcon,
+  EditIcon,
+  LockIcon,
+  CheckIcon,
+  ChevronRightIcon,
+  ChevronLeftIcon,
+} from "@/components/ui/Icons";
+import { Button } from "@/components/ui/Button";
 
-const PERM_CREATE =
-  "userManagement-createUser";
-
-const PERM_UPDATE =
-  "userManagement-updateUser";
-
-const PERM_DEACTIVATE =
-  "userManagement-deactivateUser";
-
-const PERM_ACTIVATE =
-  "userManagement-activateUser";
-
-const PERM_LIST =
-  "userManagement-listUsers";
+const PERM_CREATE = "userManagement-createUser";
+const PERM_UPDATE = "userManagement-updateUser";
+const PERM_DEACTIVATE = "userManagement-deactivateUser";
+const PERM_ACTIVATE = "userManagement-activateUser";
+const PERM_LIST = "userManagement-listUsers";
 
 interface UserPageProps {
   permissions?: Permission[];
@@ -38,9 +38,7 @@ export default function UserPage({
   fieldPermissions = [],
 }: UserPageProps) {
   const router = useRouter();
-
-  const [view, setView] =
-    useState<PageView>("home");
+  const [view, setView] = useState<PageView>("home");
 
   const hasUsersSection = hasPermission(permissions, "sec_user_users");
 
@@ -82,7 +80,7 @@ export default function UserPage({
     return (
       <PageShell
         title="New User"
-        subtitle="Fill in the form below."
+        subtitle="Fill in the details to create a new user account."
         onBack={reset}
       >
         <UserForm
@@ -98,18 +96,18 @@ export default function UserPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600">
+      {/* Header (Clean Minimalist Greyish) */}
+      <div className="border-b border-neutral-100 pb-5">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
           User Management
         </p>
 
-        <h1 className="mt-1 text-2xl font-bold text-slate-900">
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-neutral-900">
           User Management
         </h1>
 
-        <p className="mt-1 text-sm text-slate-500">
-          Manage users based on your assigned permissions.
+        <p className="mt-0.5 text-xs text-neutral-500">
+          Manage system users and access based on your assigned Casbin permissions.
         </p>
       </div>
 
@@ -119,25 +117,21 @@ export default function UserPage({
       !canDeactivate &&
       !canActivate &&
       !canList ? (
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-10 text-center text-sm text-red-500">
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-8 text-center text-xs text-neutral-500">
           You do not have permission to manage users.
         </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-
+        /* Action Cards (Restrained Greyish Palette) */
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {/* CREATE */}
           {canCreate && (
             <ActionCard
               title="Create User"
-              description="Add a new user to the system."
-              icon="＋"
-              iconColor="bg-violet-100 text-violet-600"
+              description="Add a new employee to the system."
+              icon={<PlusSquareIcon size={18} />}
               allowed
-              onAction={() =>
-                setView("create")
-              }
+              onAction={() => setView("create")}
               buttonLabel="New User"
-              buttonClass="bg-violet-600 hover:bg-violet-500"
             />
           )}
 
@@ -145,15 +139,11 @@ export default function UserPage({
           {canUpdate && (
             <ActionCard
               title="Update User"
-              description="Edit an existing user's details."
-              icon="✎"
-              iconColor="bg-blue-100 text-blue-600"
+              description="Edit an existing user's details and role."
+              icon={<EditIcon size={18} />}
               allowed
-              onAction={() =>
-                router.push("/update-user")
-              }
+              onAction={() => router.push("/update-user")}
               buttonLabel="Update User"
-              buttonClass="bg-blue-600 hover:bg-blue-500"
             />
           )}
 
@@ -161,36 +151,29 @@ export default function UserPage({
           {canDeactivate && (
             <ActionCard
               title="Deactivate User"
-              description="Deactivate an active user's account."
-              icon="⊘"
-              iconColor="bg-red-100 text-red-600"
-            allowed
-            onAction={() =>
-                router.push("/deactivate-user")
-            }
-            buttonLabel="Deactivate User"
-            buttonClass="bg-red-600 hover:bg-red-500"
+              description="Temporarily suspend an active account."
+              icon={<LockIcon size={18} />}
+              allowed
+              onAction={() => router.push("/deactivate-user")}
+              buttonLabel="Deactivate"
             />
           )}
 
+          {/* ACTIVATE */}
           {canActivate && (
-          <ActionCard
-            title="Activate User"
-            description="Activate an inactive user's account."
-            icon="✓"
-            iconColor="bg-emerald-100 text-emerald-600"
-            allowed
-            onAction={() =>
-              router.push("/activate-user")
-            }
-            buttonLabel="Activate User"
-            buttonClass="bg-emerald-600 hover:bg-emerald-500"
-          />
+            <ActionCard
+              title="Activate User"
+              description="Restore access for an inactive account."
+              icon={<CheckIcon size={18} />}
+              allowed
+              onAction={() => router.push("/activate-user")}
+              buttonLabel="Activate"
+            />
           )}
-
         </div>
       )}
 
+      {/* User Table */}
       {canList && <UserList fieldPermissions={fieldPermissions} />}
     </div>
   );
@@ -209,25 +192,20 @@ function PageShell({
 }) {
   return (
     <div className="space-y-5">
-      <div>
+      <div className="border-b border-neutral-100 pb-4">
         <button
+          type="button"
           onClick={onBack}
-          className="mb-3 text-xs font-semibold text-slate-400 hover:text-slate-600"
+          className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-900 transition"
         >
-          ← Back to User Management
+          <ChevronLeftIcon size={14} />
+          <span>Back to User Management</span>
         </button>
 
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600">
-          User Management
-        </p>
-
-        <h1 className="mt-1 text-2xl font-bold text-slate-900">
+        <h1 className="text-xl font-bold tracking-tight text-neutral-900">
           {title}
         </h1>
-
-        <p className="mt-1 text-sm text-slate-500">
-          {subtitle}
-        </p>
+        <p className="mt-0.5 text-xs text-neutral-500">{subtitle}</p>
       </div>
 
       {children}
@@ -239,48 +217,40 @@ function ActionCard({
   title,
   description,
   icon,
-  iconColor,
   allowed,
   onAction,
   buttonLabel,
-  buttonClass,
 }: {
   title: string;
   description: string;
-  icon: string;
-  iconColor: string;
+  icon: React.ReactNode;
   allowed: boolean;
   onAction: () => void;
   buttonLabel: string;
-  buttonClass: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="flex items-start gap-4">
-        <div
-          className={`flex h-11 w-11 items-center justify-center rounded-xl ${iconColor}`}
-        >
+    <div className="flex flex-col justify-between rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xs hover:border-neutral-300 transition duration-150">
+      <div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-neutral-100 text-neutral-800 mb-3">
           {icon}
         </div>
 
-        <div>
-          <h2 className="font-semibold text-slate-900">
-            {title}
-          </h2>
-
-          <p className="mt-1 text-sm text-slate-500">
-            {description}
-          </p>
-        </div>
+        <h3 className="text-sm font-bold text-neutral-900">{title}</h3>
+        <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
+          {description}
+        </p>
       </div>
 
       {allowed && (
-        <button
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={onAction}
-          className={`mt-5 rounded-lg px-5 py-2.5 text-sm font-semibold text-white ${buttonClass}`}
+          className="mt-5 w-full justify-between"
+          rightIcon={<ChevronRightIcon size={14} />}
         >
           {buttonLabel}
-        </button>
+        </Button>
       )}
     </div>
   );

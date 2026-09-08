@@ -2,20 +2,13 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import UserForm, {
-  type UserFormData,
-} from "@/component/UserForm";
-import {
-  hasPermission,
-  type Permission,
-  type FieldPermission,
-} from "@/lib/permissions";
+import UserForm, { type UserFormData } from "@/component/UserForm";
+import { hasPermission, type Permission, type FieldPermission } from "@/lib/permissions";
+import { ChevronLeftIcon, SearchIcon } from "@/components/ui/Icons";
+import { Button } from "@/components/ui/Button";
 
-const PERM_DEACTIVATE =
-  "userManagement-deactivateUser";
-
-const PERM_ACTIVATE =
-  "userManagement-activateUser";
+const PERM_DEACTIVATE = "userManagement-deactivateUser";
+const PERM_ACTIVATE = "userManagement-activateUser";
 
 interface DeactivateUserPageProps {
   permissions?: Permission[];
@@ -48,112 +41,63 @@ export default function DeactivateUserPage({
   const router = useRouter();
 
   const [ntIdInput, setNtId] = useState("");
+  const [loadedUser, setLoadedUser] = useState<Partial<UserFormData> | null>(null);
+  const [loadedUserId, setLoadedUserId] = useState<number | null>(null);
+  const [lookupError, setLookupError] = useState("");
+  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [actionMode, setActionMode] = useState<ActionMode | null>(null);
 
-  const [loadedUser, setLoadedUser] =
-    useState<Partial<UserFormData> | null>(null);
-
-  const [loadedUserId, setLoadedUserId] =
-    useState<number | null>(null);
-
-  const [lookupError, setLookupError] =
-    useState("");
-
-  const [loaded, setLoaded] =
-    useState(false);
-
-  const [actionMode, setActionMode] =
-    useState<ActionMode | null>(null);
-
-  const canDeactivate = hasPermission(
-    permissions,
-    PERM_DEACTIVATE,
-  );
-
-  const canActivate = hasPermission(
-    permissions,
-    PERM_ACTIVATE,
-  );
+  const canDeactivate = hasPermission(permissions, PERM_DEACTIVATE);
+  const canActivate = hasPermission(permissions, PERM_ACTIVATE);
 
   async function handleLoad() {
     try {
+      setLoading(true);
       setLookupError("");
 
       const search = ntIdInput.trim().toUpperCase();
-
-      if (!search) {
-        return;
-      }
+      if (!search) return;
 
       const response = await fetch(
         `http://localhost:5000/api/user-management/users?search=${encodeURIComponent(
-          search,
+          search
         )}`,
         {
           credentials: "include",
-        },
+        }
       );
 
       if (!response.ok) {
-        throw new Error(
-          "Failed to fetch users",
-        );
+        throw new Error("Failed to fetch users");
       }
 
-      const result =
-        await response.json();
-
-      const users =
-        result.data as UserResponse[];
+      const result = await response.json();
+      const users = (result.data || []) as UserResponse[];
 
       if (!users.length) {
-        setLookupError(
-          `No user found for "${search}"`,
-        );
+        setLookupError(`No user found for "${search}"`);
         return;
       }
 
       const user = users[0];
       const isActive = user.isActive ?? user.is_active ?? false;
 
-      /*
-       * ACTIVE USER
-       * ----------------
-       * Only a role with deactivate
-       * permission can continue.
-       */
       if (isActive) {
         if (!canDeactivate) {
-          setLookupError(
-            "You do not have permission to deactivate this user.",
-          );
+          setLookupError("You do not have permission to deactivate this user.");
           return;
         }
-
         setActionMode("deactivate");
-      }
-
-      /*
-       * INACTIVE USER
-       * ----------------
-       * Only a role with activate
-       * permission can continue.
-       */
-      else {
+      } else {
         if (!canActivate) {
-          setLookupError(
-            "You do not have permission to activate this user.",
-          );
+          setLookupError("You do not have permission to activate this user.");
           return;
         }
-
         setActionMode("activate");
       }
 
-      /*
-       * Load user data into the form.
-       */
       setLoadedUserId(user.id);
-
       setLoadedUser({
         firstName: user.firstName ?? user.first_name ?? "",
         lastName: user.lastName ?? user.last_name ?? "",
@@ -168,10 +112,9 @@ export default function DeactivateUserPage({
       setLoaded(true);
     } catch (error) {
       console.error(error);
-
-      setLookupError(
-        "Unable to load user.",
-      );
+      setLookupError("Unable to load user.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -184,87 +127,51 @@ export default function DeactivateUserPage({
     setActionMode(null);
   }
 
-  /*
-   * User has neither activate nor deactivate permission.
-   */
   if (!canActivate && !canDeactivate) {
     return (
-      <div className="space-y-5">
-        <div>
+      <div className="space-y-6">
+        <div className="border-b border-neutral-100 pb-4">
           <button
-            onClick={() =>
-              router.push(
-                "/user-management",
-              )
-            }
-            className="mb-3 text-xs font-semibold text-slate-400 hover:text-slate-600"
+            type="button"
+            onClick={() => router.push("/user-management")}
+            className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-900 transition"
           >
-            ← Back to User Management
+            <ChevronLeftIcon size={14} />
+            <span>Back to User Management</span>
           </button>
 
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-500">
-            User Management
-          </p>
-
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">
-            User Status
+          <h1 className="text-xl font-bold tracking-tight text-neutral-900">
+            Account Status
           </h1>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Activate or deactivate users based on your permissions.
-          </p>
         </div>
 
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-10 text-center text-sm text-red-500">
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-8 text-center text-xs text-neutral-500">
           You do not have permission to activate or deactivate users.
         </div>
       </div>
     );
   }
 
-  /*
-   * User has been loaded.
-   *
-   * Open UserForm using the action determined
-   * from the user's current status.
-   */
-  if (
-    loaded &&
-    actionMode
-  ) {
+  if (loaded && actionMode) {
     return (
-      <div className="space-y-5">
-        <div>
+      <div className="space-y-6">
+        <div className="border-b border-neutral-100 pb-4">
           <button
+            type="button"
             onClick={reset}
-            className="mb-3 text-xs font-semibold text-slate-400 hover:text-slate-600"
+            className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-900 transition"
           >
-            ← Back to User Status
+            <ChevronLeftIcon size={14} />
+            <span>Back to Account Status</span>
           </button>
 
-          <p
-            className={`text-xs font-semibold uppercase tracking-[0.2em] ${
-              actionMode ===
-              "deactivate"
-                ? "text-red-500"
-                : "text-emerald-600"
-            }`}
-          >
-            User Management
-          </p>
-
-          <h1 className="mt-1 text-2xl font-bold text-slate-900">
-            {actionMode ===
-            "deactivate"
-              ? "Deactivate User"
-              : "Activate User"}
+          <h1 className="text-xl font-bold tracking-tight text-neutral-900">
+            {actionMode === "deactivate" ? "Deactivate User" : "Activate User"}
           </h1>
-
-          <p className="mt-1 text-sm text-slate-500">
-            {actionMode ===
-            "deactivate"
-              ? "Deactivate the selected user's account."
-              : "Activate the selected user's account."}
+          <p className="mt-0.5 text-xs text-neutral-500">
+            {actionMode === "deactivate"
+              ? "Review user details before suspending access."
+              : "Review user details before restoring access."}
           </p>
         </div>
 
@@ -272,19 +179,11 @@ export default function DeactivateUserPage({
           mode={actionMode}
           permissions={permissions}
           fieldPermissions={fieldPermissions}
-          initialData={
-            loadedUser ?? {}
-          }
-          userId={
-            loadedUserId ??
-            undefined
-          }
+          initialData={loadedUser ?? {}}
+          userId={loadedUserId ?? undefined}
           onSuccess={() => {
             reset();
-
-            router.push(
-              "/user-management",
-            );
+            router.push("/user-management");
           }}
           onCancel={reset}
         />
@@ -292,48 +191,35 @@ export default function DeactivateUserPage({
     );
   }
 
-  /*
-   * Search page.
-   */
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div>
+    <div className="space-y-6">
+      <div className="border-b border-neutral-100 pb-4">
         <button
-          onClick={() =>
-            router.push(
-              "/user-management",
-            )
-          }
-          className="mb-3 text-xs font-semibold text-slate-400 hover:text-slate-600"
+          type="button"
+          onClick={() => router.push("/user-management")}
+          className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-neutral-500 hover:text-neutral-900 transition"
         >
-          ← Back to User Management
+          <ChevronLeftIcon size={14} />
+          <span>Back to User Management</span>
         </button>
 
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600">
-          User Management
-        </p>
-
-        <h1 className="mt-1 text-2xl font-bold text-slate-900">
-          User Status
+        <h1 className="text-xl font-bold tracking-tight text-neutral-900">
+          Account Status Management
         </h1>
-
-        <p className="mt-1 text-sm text-slate-500">
-          Search for a user to activate or deactivate their account.
+        <p className="mt-0.5 text-xs text-neutral-500">
+          Search for an employee account to modify active status.
         </p>
       </div>
 
-      {/* Find User */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="font-semibold text-slate-900">
-          Find User
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs max-w-xl">
+        <h2 className="text-sm font-bold text-neutral-900 mb-1">
+          Find User Record
         </h2>
-
-        <p className="mt-1 text-sm text-slate-500">
-          Enter an employee ID to check the user's current status.
+        <p className="text-xs text-neutral-500 mb-4">
+          Enter an employee ID to check account status.
         </p>
 
-        <div className="mt-5 flex gap-2">
+        <div className="flex gap-2">
           <input
             type="text"
             value={ntIdInput}
@@ -341,28 +227,25 @@ export default function DeactivateUserPage({
               setNtId(e.target.value.toUpperCase());
               setLookupError("");
             }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleLoad();
-              }
-            }}
-            placeholder="Enter employee ID"
-            className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+            onKeyDown={(e) => e.key === "Enter" && handleLoad()}
+            placeholder="Enter employee ID…"
+            className="flex-1 rounded-lg border border-neutral-200 bg-neutral-50/50 px-3.5 py-2 text-xs text-neutral-900 placeholder-neutral-400 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-1 focus:ring-neutral-400"
           />
 
-          <button
+          <Button
+            variant="primary"
+            size="md"
             onClick={handleLoad}
             disabled={!ntIdInput.trim()}
-            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+            isLoading={loading}
+            leftIcon={<SearchIcon size={14} />}
           >
-            Load
-          </button>
+            Check Status
+          </Button>
         </div>
 
         {lookupError && (
-          <p className="mt-3 text-xs text-red-500">
-            {lookupError}
-          </p>
+          <p className="mt-3 text-xs text-red-500">{lookupError}</p>
         )}
       </div>
     </div>

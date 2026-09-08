@@ -1,27 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  TextField,
-  Typography,
-  Alert,
-  CircularProgress,
-  Divider,
-  Grid,
-  Chip,
-} from '@mui/material';
 import axios from 'axios';
-import SendIcon from '@mui/icons-material/Send';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
-
-const AnyGrid: any = Grid;
-const AnyTextField: any = TextField;
+import { PaperPlaneIcon } from '@/components/ui/Icons';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 
 interface PublishResponse {
   success: boolean;
@@ -48,14 +31,13 @@ export default function PubSubProducerComponent() {
   const [message, setMessage] = useState<{ type: string; text: string } | null>(null);
   const [publishHistory, setPublishHistory] = useState<PublishResponse[]>([]);
   const [status, setStatus] = useState<StatusResponse | null>(null);
-  const [statusLoading, setStatusLoading] = useState(false);
+  const [_statusLoading, setStatusLoading] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-  // Fetch PubSub status on component mount
   useEffect(() => {
     fetchStatus();
-    const interval = setInterval(fetchStatus, 5000); // Poll every 5 seconds
+    const interval = setInterval(fetchStatus, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -63,7 +45,7 @@ export default function PubSubProducerComponent() {
     try {
       setStatusLoading(true);
       const response = await axios.get<StatusResponse>(
-        `${API_URL}/api/pubsub/status`,
+        `${API_URL}/api/pubsub/status`
       );
       setStatus(response.data);
     } catch (error) {
@@ -78,7 +60,6 @@ export default function PubSubProducerComponent() {
     setMessage(null);
 
     try {
-      // Parse metadata JSON
       let parsedMetadata = {};
       try {
         parsedMetadata = JSON.parse(metadata);
@@ -100,7 +81,7 @@ export default function PubSubProducerComponent() {
 
       const response = await axios.post<PublishResponse>(
         `${API_URL}/api/pubsub/publish`,
-        payload,
+        payload
       );
 
       setMessage({
@@ -108,10 +89,8 @@ export default function PubSubProducerComponent() {
         text: `Message published successfully! ID: ${response.data.messageId}`,
       });
 
-      // Add to history
       setPublishHistory((prev) => [response.data, ...prev].slice(0, 10));
 
-      // Reset form
       setEventType('USER_ACTION');
       setUserId('user-123');
       setSessionId('session-456');
@@ -165,194 +144,187 @@ export default function PubSubProducerComponent() {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
-        📡 Google Cloud Pub/Sub Producer
-      </Typography>
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Connection Status Card */}
+      <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-neutral-100 pb-3 mb-3">
+          <div>
+            <h2 className="text-sm font-bold text-neutral-900">Topic Connection Status</h2>
+            <p className="text-xs text-neutral-500">Real-time status of Cloud Pub/Sub service</p>
+          </div>
+          <Badge variant={status?.connected ? 'success' : 'neutral'} dot>
+            {status?.connected ? 'Connected' : 'Disconnected'}
+          </Badge>
+        </div>
 
-      <AnyGrid container spacing={3}>
-        {/* Status Card */}
-        <AnyGrid item xs={12}>
-          <Card>
-            <CardHeader
-              title="Pub/Sub Status"
-              subheader={statusLoading ? 'Loading...' : 'Real-time connection status'}
-            />
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                {status?.connected ? (
-                  <>
-                    <CheckCircleIcon sx={{ color: 'green', fontSize: 40 }} />
-                    <Box>
-                      <Typography variant="h6" sx={{ color: 'green' }}>
-                        Connected
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        Topic: {status?.details?.topicName}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        Subscription: {status?.details?.subscriptionName}
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        Active Handlers: {status?.details?.messageHandlersCount}
-                      </Typography>
-                    </Box>
-                  </>
-                ) : (
-                  <>
-                    <ErrorIcon sx={{ color: 'red', fontSize: 40 }} />
-                    <Typography variant="h6" sx={{ color: 'red' }}>
-                      Disconnected
-                    </Typography>
-                  </>
-                )}
-              </Box>
-            </CardContent>
-          </Card>
-        </AnyGrid>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+          <div>
+            <span className="font-semibold text-neutral-400">Target Topic:</span>
+            <p className="font-mono text-neutral-800 font-medium truncate mt-0.5">
+              {status?.details?.topicName || '—'}
+            </p>
+          </div>
+          <div>
+            <span className="font-semibold text-neutral-400">Subscription:</span>
+            <p className="font-mono text-neutral-800 font-medium truncate mt-0.5">
+              {status?.details?.subscriptionName || '—'}
+            </p>
+          </div>
+          <div>
+            <span className="font-semibold text-neutral-400">Active Handlers:</span>
+            <p className="font-mono text-neutral-800 font-medium mt-0.5">
+              {status?.details?.messageHandlersCount ?? 0}
+            </p>
+          </div>
+        </div>
+      </div>
 
-        {/* Main Publisher Card */}
-        <AnyGrid item xs={12} md={8}>
-          <Card>
-            <CardHeader
-              title="Publish Message"
-              subheader="Send a message to the Pub/Sub topic"
-            />
-            <Divider />
-            <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {message && (
-                <Alert severity={message.type === 'success' ? 'success' : 'error'}>
-                  {message.text}
-                </Alert>
-              )}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Main Publish Form (8 cols) */}
+        <div className="lg:col-span-8 rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs space-y-4">
+          <div>
+            <h3 className="text-sm font-bold text-neutral-900">Publish Message</h3>
+            <p className="text-xs text-neutral-500">Construct and send JSON message payload</p>
+          </div>
 
-              <TextField
-                label="Event Type"
+          {message && (
+            <div
+              className={`rounded-xl border p-3 text-xs font-semibold ${
+                message.type === 'success'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                  : 'border-red-200 bg-red-50 text-red-800'
+              }`}
+            >
+              {message.text}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
+                Event Type
+              </label>
+              <select
                 value={eventType}
                 onChange={(e) => setEventType(e.target.value)}
-                fullWidth
-                size="small"
-                select
-                slotProps={{
-                  select: {
-                    native: true,
-                  },
-                }}
+                className="w-full rounded-lg border border-neutral-200 bg-neutral-50/50 px-3.5 py-2 text-xs font-semibold text-neutral-800 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-1 focus:ring-neutral-400"
               >
                 <option value="SESSION_CREATED">SESSION_CREATED</option>
                 <option value="SESSION_UPDATED">SESSION_UPDATED</option>
                 <option value="USER_ACTION">USER_ACTION</option>
                 <option value="COOKIE_SYNC">COOKIE_SYNC</option>
-              </TextField>
+              </select>
+            </div>
 
-              <TextField
-                label="User ID"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                fullWidth
-                size="small"
-                placeholder="e.g., user-123"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  User ID
+                </label>
+                <input
+                  type="text"
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  placeholder="e.g., user-123"
+                  className="w-full rounded-lg border border-neutral-200 bg-neutral-50/50 px-3.5 py-2 text-xs text-neutral-800 placeholder-neutral-400 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-1 focus:ring-neutral-400"
+                />
+              </div>
 
-              <TextField
-                label="Session ID"
-                value={sessionId}
-                onChange={(e) => setSessionId(e.target.value)}
-                fullWidth
-                size="small"
-                placeholder="e.g., session-456"
-              />
+              <div>
+                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
+                  Session ID
+                </label>
+                <input
+                  type="text"
+                  value={sessionId}
+                  onChange={(e) => setSessionId(e.target.value)}
+                  placeholder="e.g., session-456"
+                  className="w-full rounded-lg border border-neutral-200 bg-neutral-50/50 px-3.5 py-2 text-xs text-neutral-800 placeholder-neutral-400 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-1 focus:ring-neutral-400"
+                />
+              </div>
+            </div>
 
-              <TextField
-                label="Metadata (JSON)"
+            <div>
+              <label className="block text-xs font-semibold text-neutral-700 mb-1.5">
+                Metadata (JSON format)
+              </label>
+              <textarea
+                rows={4}
                 value={metadata}
                 onChange={(e) => setMetadata(e.target.value)}
-                fullWidth
-                multiline
-                rows={4}
-                size="small"
                 placeholder='{"key":"value"}'
+                className="w-full rounded-lg border border-neutral-200 bg-neutral-50/50 p-3 font-mono text-xs text-neutral-800 placeholder-neutral-400 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-1 focus:ring-neutral-400"
               />
+            </div>
 
-              <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                onClick={handlePublish}
-                disabled={loading}
-                startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
-                sx={{ py: 1.5 }}
+            <Button
+              variant="primary"
+              size="lg"
+              onClick={handlePublish}
+              isLoading={loading}
+              className="w-full"
+              leftIcon={<PaperPlaneIcon size={16} />}
+            >
+              Publish Message to Cloud Topic
+            </Button>
+          </div>
+        </div>
+
+        {/* Quick Load Presets (4 cols) */}
+        <div className="lg:col-span-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs space-y-3">
+          <div>
+            <h3 className="text-sm font-bold text-neutral-900">Preset Templates</h3>
+            <p className="text-xs text-neutral-500">Quick-load test payloads</p>
+          </div>
+
+          <div className="flex flex-col gap-2 pt-1">
+            {dummyEvents.map((event, index) => (
+              <button
+                key={index}
+                type="button"
+                onClick={() => loadDummyEvent(event)}
+                className="w-full text-left rounded-xl border border-neutral-200 bg-neutral-50/50 hover:bg-neutral-100 p-3 text-xs font-semibold text-neutral-700 transition"
               >
-                {loading ? 'Publishing...' : 'Publish Message'}
-              </Button>
-            </CardContent>
-          </Card>
-        </AnyGrid>
-
-        {/* Dummy Events Card */}
-        <AnyGrid item xs={12} md={4}>
-          <Card>
-            <CardHeader
-              title="Quick Load"
-              subheader="Load dummy events"
-            />
-            <Divider />
-            <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {dummyEvents.map((event, index) => (
-                <Button
-                  key={index}
-                  variant="outlined"
-                  size="small"
-                  onClick={() => loadDummyEvent(event)}
-                  sx={{ justifyContent: 'flex-start' }}
-                >
+                <span className="font-mono text-neutral-900 block font-bold">
                   {event.eventType}
-                </Button>
-              ))}
-            </CardContent>
-          </Card>
-        </AnyGrid>
+                </span>
+                <span className="text-[11px] text-neutral-400 font-normal">
+                  User: {event.userId}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-        {/* Publish History */}
-        {publishHistory.length > 0 && (
-          <AnyGrid item xs={12}>
-            <Card>
-              <CardHeader
-                title="Recent Publishes"
-                subheader={`Last ${publishHistory.length} messages`}
-              />
-              <Divider />
-              <CardContent>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {publishHistory.map((item) => (
-                    <Box
-                      key={item.messageId}
-                      sx={{
-                        p: 2,
-                        backgroundColor: '#f5f5f5',
-                        borderRadius: 1,
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          {item.messageId}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          {new Date(item.timestamp).toLocaleString()}
-                        </Typography>
-                      </Box>
-                      <Chip label="Published" color="success" size="small" />
-                    </Box>
-                  ))}
-                </Box>
-              </CardContent>
-            </Card>
-          </AnyGrid>
-        )}
-      </AnyGrid>
-    </Box>
+      {/* Publish History */}
+      {publishHistory.length > 0 && (
+        <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs">
+          <h3 className="text-sm font-bold text-neutral-900 mb-3">
+            Recent Publications ({publishHistory.length})
+          </h3>
+          <div className="divide-y divide-neutral-100">
+            {publishHistory.map((item) => (
+              <div
+                key={item.messageId}
+                className="py-3 flex items-center justify-between text-xs"
+              >
+                <div>
+                  <span className="font-mono font-bold text-neutral-900">
+                    ID: {item.messageId}
+                  </span>
+                  <p className="text-[11px] text-neutral-400">
+                    {new Date(item.timestamp).toLocaleString()}
+                  </p>
+                </div>
+                <Badge variant="neutral" dot>
+                  Dispatched
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

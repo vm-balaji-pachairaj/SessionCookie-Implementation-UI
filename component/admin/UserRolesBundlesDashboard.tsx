@@ -33,21 +33,8 @@ interface BundlePolicyPreview {
   route?: string | null;
 }
 
-// Generates consistent distinct avatar colors based on role initial
-function getRoleAvatarColor(role: string): { bg: string; text: string } {
-  const char = role.charAt(0).toUpperCase();
-  const colors: Record<string, { bg: string; text: string }> = {
-    A: { bg: "bg-blue-100", text: "text-blue-700" },
-    B: { bg: "bg-indigo-100", text: "text-indigo-700" },
-    C: { bg: "bg-red-100", text: "text-[#C81E1E]" },
-    D: { bg: "bg-amber-100", text: "text-amber-800" },
-    E: { bg: "bg-emerald-100", text: "text-emerald-700" },
-    F: { bg: "bg-cyan-100", text: "text-cyan-700" },
-    H: { bg: "bg-purple-100", text: "text-purple-700" },
-    M: { bg: "bg-orange-100", text: "text-orange-700" },
-    S: { bg: "bg-teal-100", text: "text-teal-700" },
-  };
-  return colors[char] || { bg: "bg-slate-100", text: "text-slate-700" };
+function getRoleAvatarColor(_role: string): { bg: string; text: string } {
+  return { bg: "bg-neutral-100", text: "text-neutral-700" };
 }
 
 export default function UserRolesBundlesDashboard() {
@@ -465,8 +452,8 @@ export default function UserRolesBundlesDashboard() {
               onClick={() => setStatusFilter("assigned")}
               className={`rounded-full px-3.5 py-1 text-xs font-bold transition ${
                 statusFilter === "assigned"
-                  ? "bg-amber-500 text-white shadow-xs"
-                  : "border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                  ? "bg-slate-900 text-white shadow-xs"
+                  : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300"
               }`}
             >
               Assigned ({bundles.length})
@@ -477,8 +464,8 @@ export default function UserRolesBundlesDashboard() {
               onClick={() => setStatusFilter("active")}
               className={`rounded-full px-3.5 py-1 text-xs font-bold transition ${
                 statusFilter === "active"
-                  ? "bg-emerald-600 text-white shadow-xs"
-                  : "border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                  ? "bg-slate-900 text-white shadow-xs"
+                  : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300"
               }`}
             >
               Active ({bundles.length})
@@ -530,12 +517,7 @@ export default function UserRolesBundlesDashboard() {
                     paginatedBundles.map((b, idx) => (
                       <tr
                         key={b.id}
-                        className={`transition hover:bg-slate-50/80 ${
-                          // Alternating or state-based left vertical stripe matching Scan Tag
-                          idx % 2 === 0
-                            ? "border-l-4 border-amber-500"
-                            : "border-l-4 border-emerald-500"
-                        }`}
+                        className="transition hover:bg-slate-50/80 border-l-2 border-slate-200"
                       >
                         {/* BUNDLE NAME */}
                         <td className="px-5 py-3.5">
@@ -571,8 +553,8 @@ export default function UserRolesBundlesDashboard() {
 
                         {/* STATUS */}
                         <td className="px-5 py-3.5">
-                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
+                            <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
                             Assigned
                           </span>
                         </td>

@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import api from "@/app/common";
 import type { FieldPermission } from "@/lib/permissions";
+import { RefreshIcon } from "@/components/ui/Icons";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 
 type User = {
   id: number;
@@ -18,15 +21,19 @@ type User = {
 
 const COLUMNS = [
   ["employeeId", "Employee ID"],
-  ["firstName", "First name"],
-  ["lastName", "Last name"],
+  ["firstName", "First Name"],
+  ["lastName", "Last Name"],
   ["email", "Email"],
   ["phone", "Phone"],
   ["role", "Role"],
   ["department", "Department"],
 ] as const;
 
-export default function UserList({ fieldPermissions }: { fieldPermissions: FieldPermission[] }) {
+export default function UserList({
+  fieldPermissions,
+}: {
+  fieldPermissions: FieldPermission[];
+}) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -37,8 +44,8 @@ export default function UserList({ fieldPermissions }: { fieldPermissions: Field
         permission.module === "userList" &&
         permission.section === "columns" &&
         permission.field === field &&
-        (permission.access === "view" || permission.access === "edit"),
-    ),
+        (permission.access === "view" || permission.access === "edit")
+    )
   );
 
   const loadUsers = useCallback(async () => {
@@ -59,39 +66,82 @@ export default function UserList({ fieldPermissions }: { fieldPermissions: Field
   }, [loadUsers]);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+    <section className="overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xs">
+      <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
         <div>
-          <h2 className="font-semibold text-slate-900">Existing users</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Columns are shown only when your p3 policy grants access.</p>
+          <h2 className="text-sm font-bold text-neutral-900 tracking-tight">
+            Existing Users Directory
+          </h2>
+          <p className="mt-0.5 text-xs text-neutral-500">
+            Columns are dynamically gated according to your Casbin p3 field policies.
+          </p>
         </div>
-        <button onClick={() => void loadUsers()} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => void loadUsers()}
+          isLoading={loading}
+          leftIcon={<RefreshIcon size={14} />}
+        >
           Refresh
-        </button>
+        </Button>
       </div>
 
       {loading ? (
-        <p className="px-6 py-10 text-center text-sm text-slate-400">Loading users…</p>
+        <p className="px-6 py-12 text-center text-xs text-neutral-400">
+          Loading users…
+        </p>
       ) : error ? (
-        <p className="px-6 py-10 text-center text-sm text-red-600">{error}</p>
+        <p className="px-6 py-12 text-center text-xs text-red-600">{error}</p>
       ) : columns.length === 0 ? (
-        <p className="px-6 py-10 text-center text-sm text-slate-500">You can list users, but no user fields are assigned to your role.</p>
+        <p className="px-6 py-12 text-center text-xs text-neutral-500">
+          You can list users, but no user fields are assigned to your role.
+        </p>
       ) : users.length === 0 ? (
-        <p className="px-6 py-10 text-center text-sm text-slate-400">No active users found.</p>
+        <p className="px-6 py-12 text-center text-xs text-neutral-400">
+          No users found in database.
+        </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                {columns.map(([field, label]) => <th key={field} className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">{label}</th>)}
-                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-400">Status</th>
+          <table className="min-w-full text-xs text-left">
+            <thead>
+              <tr className="border-b border-neutral-100 bg-neutral-50 text-[11px] font-bold uppercase tracking-wider text-neutral-500">
+                {columns.map(([field, label]) => (
+                  <th key={field} className="px-6 py-3.5">
+                    {label}
+                  </th>
+                ))}
+                <th className="px-6 py-3.5 text-right">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-neutral-100">
               {users.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-50">
-                  {columns.map(([field]) => <td key={field} className="whitespace-nowrap px-6 py-4 text-slate-700">{user[field] || "—"}</td>)}
-                  <td className="px-6 py-4"><span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${user.isActive ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>{user.isActive ? "Active" : "Inactive"}</span></td>
+                <tr
+                  key={user.id}
+                  className="hover:bg-neutral-50/70 transition-colors"
+                >
+                  {columns.map(([field]) => (
+                    <td
+                      key={field}
+                      className="whitespace-nowrap px-6 py-4 text-neutral-700 font-medium"
+                    >
+                      {field === "employeeId" ? (
+                        <span className="font-mono text-neutral-900 font-semibold">
+                          {user[field as keyof User] as string || "—"}
+                        </span>
+                      ) : (
+                        (user[field as keyof User] as string) || "—"
+                      )}
+                    </td>
+                  ))}
+                  <td className="px-6 py-4 text-right">
+                    <Badge
+                      variant={user.isActive ? "success" : "neutral"}
+                      dot
+                    >
+                      {user.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </td>
                 </tr>
               ))}
             </tbody>

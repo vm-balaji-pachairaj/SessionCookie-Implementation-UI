@@ -1,30 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  CardHeader,
-  Typography,
-  Divider,
-  Chip,
-  Alert,
-  CircularProgress,
-  Grid,
-  Paper,
-  Button,
-  ButtonGroup,
-} from '@mui/material';
 import axios from 'axios';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import ErrorIcon from '@mui/icons-material/Error';
-import StorageIcon from '@mui/icons-material/Storage';
-import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
-import ThumbUpAltIcon from '@mui/icons-material/ThumbUpAlt';
-import ThumbDownAltIcon from '@mui/icons-material/ThumbDownAlt';
-
-const AnyGrid: any = Grid;
+import { RefreshIcon, CheckIcon } from '@/components/ui/Icons';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
 
 interface PubSubMessage {
   data: Record<string, any>;
@@ -41,16 +21,15 @@ interface SubscriberStats {
 
 export default function PubSubSubscriberComponent() {
   const [recentMessages, setRecentMessages] = useState<PubSubMessage[]>([]);
-  const [stats, setStats] = useState<SubscriberStats | null>(null);
+  const [stats] = useState<SubscriberStats | null>(null);
   const [isListening, setIsListening] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fetchingMessages, setFetchingMessages] = useState(false);
   const [processingMessageId, setProcessingMessageId] = useState<string | null>(null);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-  // Fetch messages from Pub/Sub
   const fetchMessages = async () => {
     try {
       setFetchingMessages(true);
@@ -67,7 +46,6 @@ export default function PubSubSubscriberComponent() {
     }
   };
 
-  // Acknowledge a message
   const acknowledgeMessage = async (messageId: string, ackId: string) => {
     try {
       setProcessingMessageId(messageId);
@@ -75,7 +53,6 @@ export default function PubSubSubscriberComponent() {
         messageId,
         ackId,
       });
-      // Remove the message from the list
       setRecentMessages((prev) => prev.filter((msg) => msg.id !== messageId));
       setError(null);
     } catch (err) {
@@ -86,7 +63,6 @@ export default function PubSubSubscriberComponent() {
     }
   };
 
-  // Nack (negative acknowledge) a message
   const nackMessage = async (messageId: string, ackId: string) => {
     try {
       setProcessingMessageId(messageId);
@@ -94,7 +70,6 @@ export default function PubSubSubscriberComponent() {
         messageId,
         ackId,
       });
-      // Remove the message from the list
       setRecentMessages((prev) => prev.filter((msg) => msg.id !== messageId));
       setError(null);
     } catch (err) {
@@ -105,10 +80,7 @@ export default function PubSubSubscriberComponent() {
     }
   };
 
-  // Simulate fetching subscriber status
-  // In a real app, you would create a separate endpoint to fetch subscriber stats
   useEffect(() => {
-    // Check connection and start listening
     const checkStatus = async () => {
       try {
         setLoading(true);
@@ -125,243 +97,155 @@ export default function PubSubSubscriberComponent() {
     };
 
     checkStatus();
-
-    // Poll for updates every 3 seconds
-    const interval = setInterval(() => {
-      checkStatus();
-      // Here you could also fetch recent messages from a subscriber stats endpoint
-      // if you create one in your backend
-    }, 3000);
-
+    const interval = setInterval(checkStatus, 3000);
     return () => clearInterval(interval);
   }, []);
 
-  const getEventIcon = (eventType: string) => {
-    switch (eventType) {
-      case 'SESSION_CREATED':
-        return '📱';
-      case 'SESSION_UPDATED':
-        return '🔄';
-      case 'USER_ACTION':
-        return '👆';
-      case 'COOKIE_SYNC':
-        return '🍪';
-      default:
-        return '📨';
-    }
-  };
-
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
-        🔔 Google Cloud Pub/Sub Subscriber
-      </Typography>
-
+    <div className="space-y-6 max-w-5xl mx-auto">
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs font-semibold text-red-700">
           {error}
-        </Alert>
+        </div>
       )}
 
-      <AnyGrid container spacing={3}>
-        {/* Listening Status */}
-        <AnyGrid item xs={12} md={6}>
-          <Card>
-            <CardHeader title="Subscriber Status" />
-            <Divider />
-            <CardContent>
-              {loading ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <CircularProgress size={40} />
-                  <Typography>Checking connection...</Typography>
-                </Box>
-              ) : (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  {isListening ? (
-                    <>
-                      <CheckCircleIcon
-                        sx={{ color: 'green', fontSize: 40, animation: 'pulse 2s infinite' }}
-                      />
-                      <Box>
-                        <Typography variant="h6" sx={{ color: 'green' }}>
-                          Listening
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          Waiting for messages...
-                        </Typography>
-                      </Box>
-                    </>
-                  ) : (
-                    <>
-                      <ErrorIcon sx={{ color: 'red', fontSize: 40 }} />
-                      <Typography variant="h6" sx={{ color: 'red' }}>
-                        Not Connected
-                      </Typography>
-                    </>
-                  )}
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        </AnyGrid>
-
-        {/* Message Count */}
-        <AnyGrid item xs={12} md={6}>
-          <Card>
-            <CardHeader title="Queue Statistics" />
-            <Divider />
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <StorageIcon sx={{ color: 'primary.main', fontSize: 40 }} />
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                    Messages in Queue
-                  </Typography>
-                  <Typography variant="h5">
-                    {stats?.totalMessages || 0} / {stats?.maxSize || 1000}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    {stats?.utilizationPercent?.toFixed(2) || 0}% utilized
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        </AnyGrid>
-
-        {/* Recent Messages */}
-        <AnyGrid item xs={12}>
-          <Card>
-            <CardHeader
-              title="Recent Messages"
-              subheader="Last messages received from Pub/Sub"
-              action={
-                <Button
-                  variant="contained"
-                  startIcon={<CloudDownloadIcon />}
-                  onClick={fetchMessages}
-                  disabled={fetchingMessages}
-                >
-                  {fetchingMessages ? 'Fetching...' : 'Fetch Messages'}
-                </Button>
-              }
+      {/* Subscriber Status & Queue Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Subscriber Daemon
+          </span>
+          <div className="mt-2 flex items-center gap-2">
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${
+                isListening ? 'bg-emerald-500 animate-pulse' : 'bg-neutral-300'
+              }`}
             />
-            <Divider />
-            <CardContent>
-              {recentMessages.length === 0 ? (
-                <Paper sx={{ p: 3, textAlign: 'center', backgroundColor: '#f5f5f5' }}>
-                  <Typography sx={{ color: 'text.secondary' }}>
-                    No messages available. Click "Fetch Messages" to pull messages from Pub/Sub.
-                  </Typography>
-                </Paper>
-              ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {recentMessages.map((msg, index) => (
-                    <Paper
-                      key={index}
-                      sx={{
-                        p: 2,
-                        backgroundColor: '#f9f9f9',
-                        borderLeft: '4px solid #1976d2',
-                      }}
+            <h3 className="text-base font-bold text-neutral-900">
+              {isListening ? 'Active & Listening' : 'Connecting to topic…'}
+            </h3>
+          </div>
+          <p className="mt-1 text-xs text-neutral-500">
+            {isListening
+              ? 'Real-time subscription handler attached to cloud topic.'
+              : 'Establishing gRPC connection…'}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xs">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+            Queue Buffer Stats
+          </span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-2xl font-bold text-neutral-900">
+              {stats?.totalMessages || 0}
+            </span>
+            <span className="text-xs text-neutral-400 font-mono">
+              / {stats?.maxSize || 1000} capacity
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-neutral-500">
+            {stats?.utilizationPercent?.toFixed(1) || 0}% queue utilization
+          </p>
+        </div>
+      </div>
+
+      {/* Received Messages Stream */}
+      <div className="rounded-2xl border border-neutral-200 bg-white shadow-2xs overflow-hidden">
+        <div className="flex items-center justify-between border-b border-neutral-100 px-6 py-4">
+          <div>
+            <h3 className="text-sm font-bold text-neutral-900">Incoming Messages Stream</h3>
+            <p className="text-xs text-neutral-500">Unacknowledged message payloads</p>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={fetchMessages}
+            isLoading={fetchingMessages}
+            leftIcon={<RefreshIcon size={14} />}
+          >
+            Fetch Messages
+          </Button>
+        </div>
+
+        <div className="p-6">
+          {recentMessages.length === 0 ? (
+            <div className="py-12 text-center text-xs text-neutral-400">
+              No unacknowledged messages. Click &quot;Fetch Messages&quot; to pull from subscription.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {recentMessages.map((msg, index) => (
+                <div
+                  key={msg.id || index}
+                  className="rounded-xl border border-neutral-200 bg-neutral-50/50 p-4 space-y-3"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-200/60 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="neutral">{msg.data?.eventType || 'MESSAGE'}</Badge>
+                      <span className="font-mono text-xs text-neutral-500">
+                        ID: {msg.id || 'N/A'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-mono text-neutral-400">
+                      {msg.timestamp
+                        ? new Date(msg.timestamp).toLocaleTimeString()
+                        : 'Just now'}
+                    </span>
+                  </div>
+
+                  <div className="text-xs space-y-1 text-neutral-700">
+                    <p>
+                      <span className="font-semibold text-neutral-500">User ID:</span>{' '}
+                      <span className="font-mono text-neutral-900">{msg.data?.userId || 'N/A'}</span>
+                    </p>
+                    <p>
+                      <span className="font-semibold text-neutral-500">Session ID:</span>{' '}
+                      <span className="font-mono text-neutral-900">{msg.data?.sessionId || 'N/A'}</span>
+                    </p>
+
+                    {msg.data?.metadata && (
+                      <div className="mt-2">
+                        <span className="font-semibold text-neutral-500 block mb-1">
+                          Metadata JSON:
+                        </span>
+                        <pre className="rounded-lg border border-neutral-200 bg-white p-2.5 font-mono text-[11px] text-neutral-800 overflow-x-auto">
+                          {JSON.stringify(msg.data.metadata, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ACK & NACK controls */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() =>
+                        acknowledgeMessage(msg.id || '', msg.ackId || '')
+                      }
+                      isLoading={processingMessageId === msg.id}
+                      leftIcon={<CheckIcon size={12} />}
                     >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                          <Typography variant="h6">
-                            {getEventIcon(msg.data.eventType)}
-                          </Typography>
-                          <Chip
-                            label={msg.data.eventType}
-                            color="primary"
-                            variant="outlined"
-                            size="small"
-                          />
-                          <Typography variant="caption" sx={{ color: 'text.secondary', ml: 2 }}>
-                            ID: {msg.id || 'N/A'}
-                          </Typography>
-                        </Box>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          {msg.timestamp
-                            ? new Date(msg.timestamp).toLocaleTimeString()
-                            : 'N/A'}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ ml: 1, mb: 2 }}>
-                        <Typography variant="body2">
-                          <strong>User ID:</strong> {msg.data.userId || 'N/A'}
-                        </Typography>
-                        <Typography variant="body2">
-                          <strong>Session ID:</strong> {msg.data.sessionId || 'N/A'}
-                        </Typography>
-                        {msg.data.metadata && (
-                          <Typography
-                            variant="body2"
-                            sx={{ mt: 1, fontFamily: 'monospace', fontSize: '0.85rem' }}
-                          >
-                            <strong>Metadata:</strong>
-                            <Box
-                              component="pre"
-                              sx={{
-                                backgroundColor: '#fff',
-                                p: 1,
-                                borderRadius: 1,
-                                overflow: 'auto',
-                                maxHeight: '150px',
-                                fontSize: '0.75rem',
-                              }}
-                            >
-                              {JSON.stringify(msg.data.metadata, null, 2)}
-                            </Box>
-                          </Typography>
-                        )}
-                      </Box>
-
-                      {/* ACK and NACK Buttons */}
-                      <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                        <ButtonGroup size="small" variant="outlined">
-                          <Button
-                            color="success"
-                            startIcon={<ThumbUpAltIcon />}
-                            onClick={() =>
-                              acknowledgeMessage(msg.id || '', msg.ackId || '')
-                            }
-                            disabled={processingMessageId === msg.id}
-                          >
-                            {processingMessageId === msg.id ? 'Processing...' : 'ACK'}
-                          </Button>
-                          <Button
-                            color="error"
-                            startIcon={<ThumbDownAltIcon />}
-                            onClick={() => nackMessage(msg.id || '', msg.ackId || '')}
-                            disabled={processingMessageId === msg.id}
-                          >
-                            {processingMessageId === msg.id ? 'Processing...' : 'NACK'}
-                          </Button>
-                        </ButtonGroup>
-                      </Box>
-                    </Paper>
-                  ))}
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        </AnyGrid>
-      </AnyGrid>
-
-      <style>{`
-        @keyframes pulse {
-          0% {
-            opacity: 1;
-          }
-          50% {
-            opacity: 0.5;
-          }
-          100% {
-            opacity: 1;
-          }
-        }
-      `}</style>
-    </Box>
+                      Acknowledge (ACK)
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        nackMessage(msg.id || '', msg.ackId || '')
+                      }
+                      disabled={processingMessageId === msg.id}
+                    >
+                      Negative Ack (NACK)
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

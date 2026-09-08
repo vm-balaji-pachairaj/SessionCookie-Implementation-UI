@@ -1,109 +1,137 @@
 'use client';
 
 import Link from 'next/link';
+import {
+  ShieldIcon,
+  PaperPlaneIcon,
+  LockIcon,
+  CheckIcon,
+  ChevronRightIcon,
+} from '@/components/ui/Icons';
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 font-sans">
-      <main className="w-full max-w-2xl px-6 py-12">
-        <div className="rounded-2xl bg-white dark:bg-slate-900 shadow-xl p-12 space-y-8">
-          {/* Header */}
-          <div className="space-y-3 text-center">
-            <h1 className="text-4xl font-bold text-slate-950 dark:text-slate-50">
-              Session Cookie POC
-            </h1>
-            <p className="text-lg text-slate-600 dark:text-slate-400">
-              Session management and Pub/Sub messaging demo
-            </p>
+    <div className="flex flex-col min-h-screen items-center justify-center bg-white font-sans text-neutral-900 px-4 py-12">
+      <main className="w-full max-w-3xl">
+        {/* Brand Header */}
+        <div className="text-center space-y-3 mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-neutral-50 px-3.5 py-1 text-xs font-semibold text-neutral-600">
+            <span className="h-2 w-2 rounded-full bg-[#C81E1E]" />
+            Enterprise Access &amp; Messaging
           </div>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-neutral-900">
+            Session Cookie &amp; PubSub POC
+          </h1>
+          <p className="text-sm text-neutral-500 max-w-lg mx-auto leading-relaxed">
+            Scalable enterprise session management, Casbin RBAC authorization matrix, and Google Cloud Pub/Sub messaging pipeline.
+          </p>
+        </div>
 
-          {/* Description */}
-          <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-6 space-y-2">
-            <h2 className="font-semibold text-slate-900 dark:text-slate-100">Welcome!</h2>
-            <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">
-              This application demonstrates session cookie management and Google Cloud Pub/Sub messaging.
-              Choose an option below to get started.
-            </p>
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Login Button */}
-            <Link
-              href="/login"
-              className="group flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-400 transition-all duration-200 hover:shadow-lg hover:scale-105"
-            >
-              <div className="text-4xl">🔐</div>
-              <div className="text-center">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                  Login
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Access the dashboard with authentication
-                </p>
+        {/* Navigation Cards (Restrained Greyish Palette) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {/* Login Card */}
+          <Link
+            href="/login"
+            className="group relative flex flex-col justify-between p-6 rounded-2xl border border-neutral-200 bg-white hover:border-neutral-400 hover:shadow-sm transition-all duration-150"
+          >
+            <div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-neutral-100 text-neutral-800 group-hover:bg-neutral-900 group-hover:text-white transition-colors duration-150 mb-4">
+                <LockIcon size={20} />
               </div>
-            </Link>
+              <h3 className="font-bold text-sm text-neutral-900">
+                User Authentication
+              </h3>
+              <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
+                Secure cookie session login with multi-role access control.
+              </p>
+            </div>
+            <div className="mt-5 flex items-center gap-1 text-xs font-semibold text-neutral-900">
+              <span>Sign In</span>
+              <ChevronRightIcon size={14} className="group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </Link>
 
-            {/* Pub/Sub Logs Button */}
-            <Link
-              href="/pubsub"
-              className="group flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-green-500 dark:hover:border-green-400 transition-all duration-200 hover:shadow-lg hover:scale-105"
-            >
-              <div className="text-4xl">📨</div>
-              <div className="text-center">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-green-600 dark:group-hover:text-green-400">
-                  Pub/Sub Logs
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Publish and monitor messages (no auth required)
-                </p>
+          {/* Pub/Sub Logs Card */}
+          <Link
+            href="/pubsub"
+            className="group relative flex flex-col justify-between p-6 rounded-2xl border border-neutral-200 bg-white hover:border-neutral-400 hover:shadow-sm transition-all duration-150"
+          >
+            <div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-neutral-100 text-neutral-800 group-hover:bg-neutral-900 group-hover:text-white transition-colors duration-150 mb-4">
+                <PaperPlaneIcon size={20} />
               </div>
-            </Link>
+              <h3 className="font-bold text-sm text-neutral-900">
+                Pub/Sub Messaging
+              </h3>
+              <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
+                Publish and consume real-time Google Cloud messages.
+              </p>
+            </div>
+            <div className="mt-5 flex items-center gap-1 text-xs font-semibold text-neutral-900">
+              <span>Explore Stream</span>
+              <ChevronRightIcon size={14} className="group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </Link>
 
-            {/* Admin Console Button */}
-            <Link
-              href="/admin"
-              className="group flex flex-col items-center justify-center gap-3 p-6 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-violet-500 dark:hover:border-violet-400 transition-all duration-200 hover:shadow-lg hover:scale-105"
-            >
-              <div className="text-4xl">🛠️</div>
-              <div className="text-center">
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-violet-600 dark:group-hover:text-violet-400">
-                  Admin Console
-                </h3>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Manage roles &amp; policies (no auth required)
-                </p>
+          {/* Admin Console Card */}
+          <Link
+            href="/admin"
+            className="group relative flex flex-col justify-between p-6 rounded-2xl border border-neutral-200 bg-white hover:border-neutral-400 hover:shadow-sm transition-all duration-150"
+          >
+            <div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-neutral-100 text-neutral-800 group-hover:bg-[#C81E1E] group-hover:text-white transition-colors duration-150 mb-4">
+                <ShieldIcon size={20} />
               </div>
-            </Link>
-          </div>
+              <h3 className="font-bold text-sm text-neutral-900">
+                Admin Console
+              </h3>
+              <p className="mt-1 text-xs text-neutral-500 leading-relaxed">
+                Inspect and administer Casbin roles, policy bundles, and rules.
+              </p>
+            </div>
+            <div className="mt-5 flex items-center gap-1 text-xs font-semibold text-neutral-900">
+              <span>Open Console</span>
+              <ChevronRightIcon size={14} className="group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </Link>
+        </div>
 
-          {/* Features */}
-          <div className="space-y-3 pt-6 border-t border-slate-200 dark:border-slate-700">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100">Features</h3>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-slate-600 dark:text-slate-400">
-              <li className="flex items-start gap-2">
-                <span className="text-green-600 dark:text-green-400 mt-1">✓</span>
-                <span>Google Cloud Pub/Sub Integration</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-600 dark:text-green-400 mt-1">✓</span>
-                <span>Session Cookie Management</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-600 dark:text-green-400 mt-1">✓</span>
-                <span>Real-time Message Monitoring</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-green-600 dark:text-green-400 mt-1">✓</span>
-                <span>Public Pub/Sub API (No Auth)</span>
-              </li>
-            </ul>
+        {/* Feature Highlights (Greyish neutral styling) */}
+        <div className="rounded-2xl border border-neutral-200 bg-neutral-50/50 p-6">
+          <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-3">
+            Core Architecture Capabilities
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-neutral-700">
+            <div className="flex items-center gap-2">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-200 text-neutral-700">
+                <CheckIcon size={10} />
+              </span>
+              <span>HttpOnly Session Cookie Authentication &amp; Rotation</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-200 text-neutral-700">
+                <CheckIcon size={10} />
+              </span>
+              <span>Casbin RBAC Matrix (P, P2, P3, G, G3 enforcement)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-200 text-neutral-700">
+                <CheckIcon size={10} />
+              </span>
+              <span>Real-Time Google Cloud Pub/Sub Pipeline</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-neutral-200 text-neutral-700">
+                <CheckIcon size={10} />
+              </span>
+              <span>Multi-Tab Session Synchronization &amp; Idle Timeout</span>
+            </div>
           </div>
+        </div>
 
-          {/* Footer */}
-          <div className="text-center text-xs text-slate-500 dark:text-slate-500 pt-6 border-t border-slate-200 dark:border-slate-700">
-            <p>Built with Next.js, NestJS, and Google Cloud Pub/Sub</p>
-          </div>
+        {/* Footer */}
+        <div className="mt-8 text-center text-xs text-neutral-400">
+          Built with Next.js App Router, NestJS Backend, and Casbin Authorization.
         </div>
       </main>
     </div>

@@ -7,6 +7,9 @@ import {
   type FieldPermission,
   hasFieldPermission,
 } from "@/lib/permissions";
+import { RefreshIcon } from "@/components/ui/Icons";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 
 interface ReportsPageProps {
   activeKey?: string;
@@ -72,7 +75,7 @@ export default function ReportsPage({
           ]);
         } else {
           setSalesData({
-            summary: "Q1 Sales Growth: +18.4%",
+            summary: "Q1 Sales Growth: +18.4% across enterprise accounts",
             monthlyTrend: [
               { month: "Jan", revenue: 19500 },
               { month: "Feb", revenue: 22400 },
@@ -102,42 +105,40 @@ export default function ReportsPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-100 pb-5">
         <div>
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-800">
-              Menu: Reports
-            </span>
-            <span className="text-slate-300">•</span>
-            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-800">
-              Section: {isAudit ? "Audit Trail" : "Sales Performance"}
-            </span>
+            <Badge variant="neutral">Reports</Badge>
+            <span className="text-neutral-300">•</span>
+            <Badge variant="neutral">
+              {isAudit ? "Audit Trail" : "Sales Performance"}
+            </Badge>
           </div>
-          <h1 className="mt-2 text-2xl font-black text-slate-900 tracking-tight">
-            {isAudit ? "System & Security Audit Reports" : "Enterprise Sales Reports"}
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-neutral-900">
+            {isAudit ? "Security & System Audit Reports" : "Enterprise Sales Reports"}
           </h1>
-          <p className="mt-0.5 text-xs text-slate-500">
+          <p className="mt-0.5 text-xs text-neutral-500">
             Protected reporting suite governed by Casbin Menu (p) and Section (p2) policies.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={fetchData}
-            className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+            isLoading={loading}
+            leftIcon={<RefreshIcon size={14} />}
           >
-            ↻ Refresh
-          </button>
-          <button
-            type="button"
+            Refresh
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleExport}
-            className="rounded-lg bg-[#C81E1E] px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-[#B91C1C] transition flex items-center gap-1.5"
           >
-            <span>↓</span>
-            <span>Export Report</span>
-            {!canExport && <span className="text-[10px] opacity-80">(P3 Gated)</span>}
-          </button>
+            Export Report {canExport ? "" : "(P3 Gated)"}
+          </Button>
         </div>
       </div>
 
@@ -146,7 +147,7 @@ export default function ReportsPage({
           className={`rounded-xl border p-4 text-xs font-semibold ${
             exportNotice.startsWith("Error")
               ? "border-red-200 bg-red-50 text-red-800"
-              : "border-emerald-200 bg-emerald-50 text-emerald-800"
+              : "border-neutral-200 bg-neutral-50 text-neutral-800"
           }`}
         >
           {exportNotice}
@@ -154,52 +155,52 @@ export default function ReportsPage({
       )}
 
       {error && (
-        <div className="rounded-2xl border border-red-200 bg-red-50/80 p-6 text-center">
-          <h3 className="text-sm font-bold text-red-900">Access Restricted</h3>
-          <p className="mt-1 text-xs text-red-700 max-w-md mx-auto">{error}</p>
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-xs text-red-700">
+          <p className="font-bold">Access Restricted</p>
+          <p className="mt-0.5">{error}</p>
         </div>
       )}
 
       {/* Content */}
       {isAudit ? (
-        /* Audit Table */
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-          <div className="border-b border-slate-100 px-6 py-4">
-            <h2 className="text-sm font-bold text-slate-900">Audit Trail Log</h2>
-            <p className="text-xs text-slate-500">
-              Chronological security audit events recorded by access control operations.
+        /* Audit Table (White & Greyish Styling) */
+        <div className="rounded-2xl border border-neutral-200 bg-white shadow-2xs overflow-hidden">
+          <div className="border-b border-neutral-100 px-6 py-4">
+            <h2 className="text-sm font-bold text-neutral-900">Audit Trail Log</h2>
+            <p className="text-xs text-neutral-500">
+              Security audit events recorded by access control operations.
             </p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
-                <tr className="border-b border-slate-200 bg-[#F9FAFC] text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <tr className="border-b border-neutral-100 bg-neutral-50 text-[11px] font-bold uppercase tracking-wider text-neutral-500">
                   <th className="px-6 py-3.5">ID</th>
-                  <th className="px-6 py-3.5">Action</th>
+                  <th className="px-6 py-3.5">Action Event</th>
                   <th className="px-6 py-3.5">Initiator</th>
                   <th className="px-6 py-3.5">Timestamp</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-neutral-100">
                 {loading ? (
                   <tr>
-                    <td colSpan={4} className="py-12 text-center text-slate-400">
+                    <td colSpan={4} className="py-12 text-center text-neutral-400">
                       Loading audit events…
                     </td>
                   </tr>
                 ) : auditData.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="py-12 text-center text-slate-400">
+                    <td colSpan={4} className="py-12 text-center text-neutral-400">
                       No audit events recorded.
                     </td>
                   </tr>
                 ) : (
                   auditData.map((ev) => (
-                    <tr key={ev.id} className="hover:bg-slate-50/80 transition">
-                      <td className="px-6 py-4 font-mono font-bold text-slate-900">{ev.id}</td>
-                      <td className="px-6 py-4 font-semibold text-slate-800">{ev.action}</td>
-                      <td className="px-6 py-4 font-mono text-slate-600">{ev.user}</td>
-                      <td className="px-6 py-4 text-slate-500 font-mono text-[11px]">
+                    <tr key={ev.id} className="hover:bg-neutral-50/70 transition-colors">
+                      <td className="px-6 py-4 font-mono font-bold text-neutral-900">{ev.id}</td>
+                      <td className="px-6 py-4 font-semibold text-neutral-800">{ev.action}</td>
+                      <td className="px-6 py-4 font-mono text-neutral-600">{ev.user}</td>
+                      <td className="px-6 py-4 text-neutral-500 font-mono text-[11px]">
                         {ev.timestamp}
                       </td>
                     </tr>
@@ -212,9 +213,9 @@ export default function ReportsPage({
       ) : (
         /* Sales Report Dashboard */
         <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
-            <h2 className="text-base font-bold text-slate-900">Executive Summary</h2>
-            <p className="mt-2 text-sm text-slate-700">
+          <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs">
+            <h2 className="text-sm font-bold text-neutral-900">Executive Summary</h2>
+            <p className="mt-1 text-xs text-neutral-600">
               {salesData?.summary || "Q1 Sales Growth: +18.4% across enterprise accounts"}
             </p>
           </div>
@@ -227,15 +228,15 @@ export default function ReportsPage({
             ]).map((t) => (
               <div
                 key={t.month}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs"
+                className="rounded-2xl border border-neutral-200 bg-white p-5 shadow-2xs"
               >
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400">
                   {t.month} Revenue
                 </span>
-                <div className="mt-2 text-2xl font-black text-slate-900">
+                <div className="mt-1 text-2xl font-bold text-neutral-900">
                   ${t.revenue.toLocaleString()}
                 </div>
-                <span className="mt-1 inline-block text-[11px] text-emerald-600 font-medium">
+                <span className="mt-1 inline-block text-[11px] text-neutral-500">
                   Verified by reporting engine
                 </span>
               </div>

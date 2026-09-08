@@ -198,20 +198,18 @@ export default function EnforcerCheckerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 font-sans">
+    <div className="min-h-screen bg-white font-sans">
       <div className="mx-auto max-w-6xl px-6 py-10">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-600">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#C81E1E]">
               Admin
             </p>
             <h1 className="mt-1 text-3xl font-bold text-slate-900">
               Enforcer Checker
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Pick a role and a policy (P section, P2 menu, or P3 field), then verify
-              Pick a role and a resource (P menu, P2 section, or P3 field), then verify
               Pick a role and a resource (P Menu, P2 Section, or P3 Field), then verify
               authorization evaluated through the role&apos;s assigned Policy Bundles
               (Role ──(g3)──&gt; Policy Bundle ──(g)──&gt; Policy).
@@ -266,7 +264,7 @@ export default function EnforcerCheckerPage() {
                 value={roleSearch}
                 onChange={(e) => setRoleSearch(e.target.value)}
                 placeholder="Search roles..."
-                className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-[#C81E1E] focus:ring-1 focus:ring-[#C81E1E]"
               />
             </div>
             <div className="max-h-96 overflow-y-auto px-4 py-3">
@@ -286,7 +284,7 @@ export default function EnforcerCheckerPage() {
                         onClick={() => setSelectedRole(r.role)}
                         className={`flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-left text-sm font-medium transition ${
                           selectedRole === r.role
-                            ? "border-violet-400 bg-violet-50 text-violet-700"
+                            ? "border-[#C81E1E] bg-red-50/40 text-[#C81E1E] font-bold"
                             : "border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50"
                         }`}
                       >
@@ -321,7 +319,7 @@ export default function EnforcerCheckerPage() {
                       ? "Search sections..."
                       : "Search fields..."
                 }
-                className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                className="mt-3 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-[#C81E1E] focus:ring-1 focus:ring-[#C81E1E]"
               />
             </div>
             <div className="max-h-96 overflow-y-auto px-4 py-3">
@@ -341,7 +339,7 @@ export default function EnforcerCheckerPage() {
                         onClick={() => setSelectedEntry(entry)}
                         className={`flex w-full items-start justify-between gap-3 rounded-lg border px-3 py-2.5 text-left transition ${
                           selectedEntry?.key === entry.key
-                            ? "border-violet-400 bg-violet-50"
+                            ? "border-[#C81E1E] bg-red-50/40"
                             : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"
                         }`}
                       >
@@ -349,7 +347,7 @@ export default function EnforcerCheckerPage() {
                           <span
                             className={`block truncate font-mono text-xs ${
                               selectedEntry?.key === entry.key
-                                ? "text-violet-700"
+                                ? "text-[#C81E1E] font-bold"
                                 : "text-slate-700"
                             }`}
                           >
@@ -383,7 +381,7 @@ export default function EnforcerCheckerPage() {
                           </span>
                         </div>
                         {selectedEntry?.key === entry.key && (
-                          <span className="mt-0.5 shrink-0 text-violet-600">
+                          <span className="mt-0.5 shrink-0 text-[#C81E1E]">
                             ✓
                           </span>
                         )}

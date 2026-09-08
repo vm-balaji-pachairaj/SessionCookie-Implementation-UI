@@ -1,8 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ShieldIcon,
+  SearchIcon,
+  FilterIcon,
+  ChevronDownIcon,
+  LogOutIcon,
+} from "@/components/ui/Icons";
+import { Avatar } from "@/components/ui/Avatar";
 
-interface ScanTagNavbarProps {
+export interface ScanTagNavbarProps {
   onToggleSidebar?: () => void;
   username?: string;
   roleName?: string;
@@ -22,6 +30,9 @@ export default function ScanTagNavbar({
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
+  const categoryMenuRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
   const categories = [
     "All RBAC Objects",
     "User Roles (g3)",
@@ -31,14 +42,25 @@ export default function ScanTagNavbar({
     "Field Permissions (p3)",
   ];
 
-  const initials = username
-    ? username
-        .split(" ")
-        .map((w) => w[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : "SA";
+  // Close dropdowns on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        categoryMenuRef.current &&
+        !categoryMenuRef.current.contains(e.target as Node)
+      ) {
+        setCategoryDropdownOpen(false);
+      }
+      if (
+        profileMenuRef.current &&
+        !profileMenuRef.current.contains(e.target as Node)
+      ) {
+        setProfileDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,18 +68,18 @@ export default function ScanTagNavbar({
   };
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white px-4 shadow-xs">
-      {/* Left: Hamburger & Casbin RBAC Brand Logo */}
+    <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-neutral-200/80 bg-white px-5 shadow-2xs">
+      {/* Left: Sidebar Toggle & Brand Shield */}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={onToggleSidebar}
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-600 transition hover:bg-neutral-100 hover:text-neutral-900"
           title="Toggle navigation"
           aria-label="Toggle navigation"
         >
           <svg
-            className="h-5 w-5"
+            className="h-4 w-4"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -71,28 +93,22 @@ export default function ScanTagNavbar({
           </svg>
         </button>
 
-        {/* Brand Shield & Casbin RBAC Title */}
+        {/* Brand Shield & Casbin RBAC Portal Title (Theme Color #C81E1E) */}
         <div className="flex items-center gap-2.5">
-          {/* Crimson Red Shield with Security Key Icon */}
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#C81E1E] text-white shadow-xs">
-            <svg
-              className="h-5 w-5 fill-current"
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 6c1.66 0 3 1.34 3 3 0 .9-.4 1.7-1 2.2V15h-4v-2.8c-.6-.5-1-1.3-1-2.2 0-1.66 1.34-3 3-3z" />
-            </svg>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#C81E1E] text-white shadow-2xs">
+            <ShieldIcon size={16} />
           </div>
 
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-black leading-tight tracking-wider text-[#C81E1E]">
+              <span className="text-xs font-black tracking-wider text-[#C81E1E]">
                 CASBIN
               </span>
               <span className="rounded bg-red-100 px-1 py-0.2 text-[9px] font-black text-[#C81E1E]">
                 RBAC
               </span>
             </div>
-            <span className="text-[10px] font-extrabold tracking-widest text-slate-800">
+            <span className="text-[10px] font-extrabold tracking-widest text-neutral-700">
               ACCESS CONTROL PORTAL
             </span>
           </div>
@@ -102,33 +118,21 @@ export default function ScanTagNavbar({
       {/* Center: Global RBAC Search Capsule */}
       <form
         onSubmit={handleSearchSubmit}
-        className="hidden md:flex flex-1 max-w-2xl mx-6 items-center rounded-lg border border-slate-200 bg-slate-50/70 p-1 shadow-2xs focus-within:border-slate-300 focus-within:bg-white"
+        className="hidden md:flex flex-1 max-w-xl mx-6 items-center rounded-xl border border-neutral-200 bg-neutral-50/60 p-1 shadow-2xs focus-within:border-neutral-400 focus-within:bg-white transition-all"
       >
         {/* Category selector */}
-        <div className="relative">
+        <div className="relative" ref={categoryMenuRef}>
           <button
             type="button"
             onClick={() => setCategoryDropdownOpen((prev) => !prev)}
-            className="flex items-center gap-1.5 rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-xs border border-slate-200 hover:bg-slate-50 transition"
+            className="flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-neutral-700 border border-neutral-200 shadow-2xs hover:bg-neutral-50 transition"
           >
             <span>{searchCategory}</span>
-            <svg
-              className="h-3.5 w-3.5 text-slate-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
+            <ChevronDownIcon size={12} className="text-neutral-400" />
           </button>
 
           {categoryDropdownOpen && (
-            <div className="absolute left-0 mt-1.5 w-52 rounded-lg border border-slate-200 bg-white py-1 shadow-lg z-50">
+            <div className="absolute left-0 mt-1.5 w-52 rounded-xl border border-neutral-200 bg-white py-1 shadow-lg z-50 animate-in fade-in zoom-in-95 duration-100">
               {categories.map((cat) => (
                 <button
                   key={cat}
@@ -137,10 +141,10 @@ export default function ScanTagNavbar({
                     setSearchCategory(cat);
                     setCategoryDropdownOpen(false);
                   }}
-                  className={`w-full px-3 py-1.5 text-left text-xs font-medium hover:bg-slate-50 ${
+                  className={`w-full px-3 py-1.5 text-left text-xs font-medium transition hover:bg-neutral-50 ${
                     searchCategory === cat
-                      ? "bg-red-50 text-[#C81E1E] font-semibold"
-                      : "text-slate-700"
+                      ? "bg-red-50 text-[#C81E1E] font-bold"
+                      : "text-neutral-700"
                   }`}
                 >
                   {cat}
@@ -150,75 +154,54 @@ export default function ScanTagNavbar({
           )}
         </div>
 
-        {/* Input */}
+        {/* Search input */}
         <div className="relative flex-1 px-3">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search role, policy bundle, module, permission rule..."
-            className="w-full bg-transparent text-xs text-slate-800 placeholder-slate-400 outline-none"
+            className="w-full bg-transparent text-xs text-neutral-800 placeholder-neutral-400 outline-none"
           />
         </div>
 
-        {/* Advanced Filters indicator */}
+        {/* Filters button */}
         <button
           type="button"
-          className="flex items-center gap-1.5 px-3 py-1 text-xs font-medium text-slate-500 hover:text-slate-800 border-l border-slate-200"
+          className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-neutral-500 hover:text-neutral-800 border-l border-neutral-200 transition"
         >
-          <svg
-            className="h-3.5 w-3.5 text-slate-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-            />
-          </svg>
+          <FilterIcon size={13} />
           <span className="text-[11px]">Filters</span>
         </button>
 
-        {/* Search button in Crimson Red */}
+        {/* Search button in Theme Crimson (#C81E1E) */}
         <button
           type="submit"
-          className="flex h-8 w-8 items-center justify-center rounded-md bg-[#C81E1E] text-white shadow-xs hover:bg-[#B91C1C] transition shrink-0 ml-1"
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#C81E1E] text-white shadow-2xs hover:bg-[#B91C1C] transition shrink-0 ml-1"
           title="Search"
         >
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2.5}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+          <SearchIcon size={14} />
         </button>
       </form>
 
-      {/* Right: User Profile Pill */}
-      <div className="relative">
+      {/* Right: User Profile Pill with Theme Accent */}
+      <div className="relative" ref={profileMenuRef}>
         <button
           type="button"
           onClick={() => setProfileDropdownOpen((prev) => !prev)}
-          className="flex items-center gap-3 rounded-full border border-slate-200 bg-white py-1 pl-1 pr-3 shadow-2xs hover:bg-slate-50 transition"
+          className="flex items-center gap-2.5 rounded-full border border-neutral-200 bg-white py-1 pl-1 pr-3 shadow-2xs hover:bg-neutral-50 transition cursor-pointer"
         >
-          {/* Circular avatar badge */}
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">
-            {initials}
-          </div>
+          {/* Avatar with theme color ring */}
+          <Avatar
+            name={username}
+            size="sm"
+            withRing
+            ringColor="theme"
+          />
 
           {/* User Details */}
           <div className="hidden sm:flex flex-col text-left">
-            <span className="text-xs font-bold leading-tight text-slate-900">
+            <span className="text-xs font-bold text-neutral-900 leading-tight">
               {username}
             </span>
             <span className="text-[10px] font-semibold text-[#C81E1E]">
@@ -226,25 +209,13 @@ export default function ScanTagNavbar({
             </span>
           </div>
 
-          <svg
-            className="h-3.5 w-3.5 text-slate-400 ml-0.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
+          <ChevronDownIcon size={13} className="text-neutral-400" />
         </button>
 
         {profileDropdownOpen && (
-          <div className="absolute right-0 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-2 shadow-xl z-50">
-            <div className="border-b border-slate-100 px-3 py-2">
-              <p className="text-xs font-bold text-slate-900">{username}</p>
+          <div className="absolute right-0 mt-2 w-52 rounded-2xl border border-neutral-200 bg-white p-2 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100">
+            <div className="border-b border-neutral-100 px-3 py-2 bg-neutral-50/50 rounded-xl mb-1">
+              <p className="text-xs font-bold text-neutral-900">{username}</p>
               <p className="text-[11px] font-semibold text-[#C81E1E]">{roleName}</p>
             </div>
             {onLogout && (
@@ -254,21 +225,9 @@ export default function ScanTagNavbar({
                   setProfileDropdownOpen(false);
                   onLogout();
                 }}
-                className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition"
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 transition"
               >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                  />
-                </svg>
+                <LogOutIcon size={14} />
                 Sign Out
               </button>
             )}

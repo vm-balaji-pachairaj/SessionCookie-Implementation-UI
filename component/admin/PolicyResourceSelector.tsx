@@ -118,50 +118,103 @@ export function PolicyResourceSelector({
   const rawMenus = propMenus || propSections;
 
   const normalizeHierarchy = useCallback((raw: HierarchyMenu[]): HierarchyMenu[] => {
-    return raw.map((m) => {
+    const menuMap = new Map<string, HierarchyMenu>();
+
+    for (const m of raw) {
       const menuKey = m.key || "";
+      if (!menuKey) continue;
+
       const rawSections = m.sections || m.menus || [];
-      const normalizedSections: HierarchySection[] = rawSections.map((s) => {
+      const sectionMap = new Map<string, HierarchySection>();
+
+      for (const s of rawSections) {
         const secKey = s.key || "";
+        const secPolicy = s.policy || s.policyName || (secKey ? `sec_${secKey}` : "");
+        if (!secKey && !secPolicy) continue;
+
         const rawFields = s.fields || [];
-        const normalizedFields: HierarchyField[] = rawFields.map((f) => ({
-          key: f.key,
-          name: f.name || f.key,
-          policy: f.policy || f.policyName || f.key,
-          policyName: f.policyName || f.policy || f.key,
-          access: f.access || "read",
-          sectionKey: secKey,
-          menuKey: menuKey,
-        }));
+        const fieldMap = new Map<string, HierarchyField>();
 
-        return {
-          key: secKey,
-          name: s.name || s.displayName || secKey,
-          displayName: s.displayName || s.name || secKey,
-          policy: s.policy || s.policyName || `sec_${secKey}`,
-          policyName: s.policyName || s.policy || `sec_${secKey}`,
-          route: s.route,
-          icon: s.icon,
-          order: s.order ?? 0,
-          access: s.access || "read",
-          page: s.page || menuKey,
-          menuKey: menuKey,
-          fields: normalizedFields,
+        for (const f of rawFields) {
+          const fldKey = f.key || "";
+          const fldPolicy = f.policy || f.policyName || f.key || "";
+          if (!fldKey && !fldPolicy) continue;
+
+          if (!fieldMap.has(fldKey) && !fieldMap.has(fldPolicy)) {
+            const fieldObj: HierarchyField = {
+              key: fldKey,
+              name: f.name || fldKey,
+              policy: fldPolicy,
+              policyName: fldPolicy,
+              access: f.access || "read",
+              sectionKey: secKey,
+              menuKey: menuKey,
+            };
+            if (fldKey) fieldMap.set(fldKey, fieldObj);
+            if (fldPolicy) fieldMap.set(fldPolicy, fieldObj);
+          }
+        }
+
+        const normalizedFields = Array.from(new Set(fieldMap.values()));
+
+        if (!sectionMap.has(secKey) && !sectionMap.has(secPolicy)) {
+          const sectionObj: HierarchySection = {
+            key: secKey,
+            name: s.name || s.displayName || secKey,
+            displayName: s.displayName || s.name || secKey,
+            policy: secPolicy,
+            policyName: secPolicy,
+            route: s.route,
+            icon: s.icon,
+            order: s.order ?? 0,
+            access: s.access || "read",
+            page: s.page || menuKey,
+            menuKey: menuKey,
+            fields: normalizedFields,
+          };
+          if (secKey) sectionMap.set(secKey, sectionObj);
+          if (secPolicy) sectionMap.set(secPolicy, sectionObj);
+        } else {
+          // Merge fields into existing section if needed
+          const existingSection = sectionMap.get(secKey) || sectionMap.get(secPolicy)!;
+          for (const nf of normalizedFields) {
+            if (!existingSection.fields.some((ef) => ef.key === nf.key || ef.policy === nf.policy)) {
+              existingSection.fields.push(nf);
+            }
+          }
+        }
+      }
+
+      const normalizedSections = Array.from(new Set(sectionMap.values()));
+
+      if (!menuMap.has(menuKey)) {
+        const menuObj: HierarchyMenu = {
+          key: menuKey,
+          name: m.name || m.displayName || menuKey,
+          displayName: m.displayName || m.name || menuKey,
+          policy: m.policy || m.policyName || menuKey,
+          policyName: m.policyName || m.policy || menuKey,
+          route: m.route || `/${menuKey}`,
+          icon: m.icon,
+          order: m.order ?? 0,
+          sections: normalizedSections,
         };
-      });
+        menuMap.set(menuKey, menuObj);
+      } else {
+        // Merge sections into existing menu if needed
+        const existingMenu = menuMap.get(menuKey)!;
+        if ((!existingMenu.route || existingMenu.route === `/${menuKey}`) && m.route) {
+          existingMenu.route = m.route;
+        }
+        for (const ns of normalizedSections) {
+          if (!existingMenu.sections.some((es) => es.key === ns.key || es.policy === ns.policy)) {
+            existingMenu.sections.push(ns);
+          }
+        }
+      }
+    }
 
-      return {
-        key: menuKey,
-        name: m.name || m.displayName || menuKey,
-        displayName: m.displayName || m.name || menuKey,
-        policy: m.policy || m.policyName || menuKey,
-        policyName: m.policyName || m.policy || menuKey,
-        route: m.route || `/${menuKey}`,
-        icon: m.icon,
-        order: m.order ?? 0,
-        sections: normalizedSections,
-      };
-    });
+    return Array.from(menuMap.values());
   }, []);
 
   useEffect(() => {
@@ -710,28 +763,28 @@ export function PolicyResourceSelector({
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-bold text-slate-600 mr-1">Resource Breakdown:</span>
             {/* Menus chip */}
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-purple-50 px-3 py-1 text-xs font-bold text-purple-800">
-              <span className="flex h-2 w-2 rounded-full bg-purple-500" />
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+              <span className="flex h-2 w-2 rounded-full bg-slate-500" />
               <span>Menus (P):</span>
-              <span className="font-black">{counts.menus}</span>
+              <span className="font-bold text-slate-900">{counts.menus}</span>
             </div>
 
             {/* Sections chip */}
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-800">
-              <span className="flex h-2 w-2 rounded-full bg-blue-500" />
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+              <span className="flex h-2 w-2 rounded-full bg-slate-500" />
               <span>Sections (P2):</span>
-              <span className="font-black">{counts.sections}</span>
+              <span className="font-bold text-slate-900">{counts.sections}</span>
             </div>
 
             {/* Fields chip */}
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+              <span className="flex h-2 w-2 rounded-full bg-slate-500" />
               <span>Fields (P3):</span>
-              <span className="font-black">{counts.fields}</span>
+              <span className="font-bold text-slate-900">{counts.fields}</span>
             </div>
 
             {/* Total chip */}
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3.5 py-1 text-xs font-black text-[#C81E1E]">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-slate-200 px-3.5 py-1 text-xs font-bold text-slate-900">
               <span>Total Selected:</span>
               <span>{counts.total}</span>
             </div>

@@ -368,17 +368,17 @@ export default function PolicyBundlesPoliciesDashboard() {
                           {b.policyCount} {b.policyCount === 1 ? "policy" : "policies"}
                         </span>
                         {typeof b.sectionCount === "number" && (
-                          <span className="rounded-full bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-blue-700">
+                          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-700">
                             {b.sectionCount} sec
                           </span>
                         )}
                         {typeof b.menuCount === "number" && (
-                          <span className="rounded-full bg-purple-50 px-1.5 py-0.5 text-[9px] font-bold text-purple-700">
+                          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-700">
                             {b.menuCount} menus
                           </span>
                         )}
                         {typeof b.fieldCount === "number" && (
-                          <span className="rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
+                          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-700">
                             {b.fieldCount} fields
                           </span>
                         )}
@@ -441,19 +441,19 @@ export default function PolicyBundlesPoliciesDashboard() {
                     {policies.length} Policies
                   </span>
                   <span>•</span>
-                  <span className="rounded-md bg-blue-50 px-2 py-0.5 font-bold text-blue-700">
+                  <span className="rounded-md bg-slate-100 px-2 py-0.5 font-bold text-slate-700">
                     {pCount} Sections
                   </span>
                   <span>•</span>
-                  <span className="rounded-md bg-purple-50 px-2 py-0.5 font-bold text-purple-700">
+                  <span className="rounded-md bg-slate-100 px-2 py-0.5 font-bold text-slate-700">
                     {p2Count} Menus
                   </span>
                   <span>•</span>
-                  <span className="rounded-md bg-amber-50 px-2 py-0.5 font-bold text-amber-800">
+                  <span className="rounded-md bg-slate-100 px-2 py-0.5 font-bold text-slate-700">
                     {p3Count} Fields
                   </span>
                   <span>•</span>
-                  <span className="rounded-md bg-emerald-50 px-2 py-0.5 font-bold text-emerald-800">
+                  <span className="rounded-md bg-slate-100 px-2 py-0.5 font-bold text-slate-700">
                     {selectedBundle.roleCount ?? selectedBundle.assignedRoles?.length ?? 0} Roles
                   </span>
                 </div>
@@ -706,8 +706,8 @@ export default function PolicyBundlesPoliciesDashboard() {
               onClick={() => setStatusFilter("active")}
               className={`rounded-full px-3.5 py-1 text-xs font-bold transition ${
                 statusFilter === "active"
-                  ? "bg-emerald-600 text-white shadow-xs"
-                  : "border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                  ? "bg-slate-900 text-white shadow-xs"
+                  : "border border-slate-200 bg-white text-slate-600 hover:border-slate-300"
               }`}
             >
               Active ({filteredPolicies.length})
@@ -787,13 +787,7 @@ export default function PolicyBundlesPoliciesDashboard() {
                     paginatedPolicies.map((p, idx) => (
                       <tr
                         key={`${p.permission}-${idx}`}
-                        className={`transition hover:bg-slate-50/80 ${
-                          p.ptype === "p"
-                            ? "border-l-4 border-purple-500"
-                            : p.ptype === "p2"
-                            ? "border-l-4 border-blue-500"
-                            : "border-l-4 border-emerald-500"
-                        }`}
+                        className="transition hover:bg-slate-50/80 border-l-2 border-slate-200"
                       >
                         {/* PERMISSION NAME */}
                         <td className="px-5 py-3.5 font-mono font-bold text-slate-900">
@@ -803,15 +797,7 @@ export default function PolicyBundlesPoliciesDashboard() {
                         {/* TYPE (shown in All tab) */}
                         {activeTab === "all" && (
                           <td className="px-5 py-3.5">
-                            <span
-                              className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
-                                p.ptype === "p"
-                                  ? "bg-purple-100 text-purple-700"
-                                  : p.ptype === "p2"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-emerald-100 text-emerald-800"
-                              }`}
-                            >
+                            <span className="rounded bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-700">
                               {p.ptype}
                             </span>
                           </td>
@@ -828,7 +814,7 @@ export default function PolicyBundlesPoliciesDashboard() {
                             </td>
                             <td className="px-5 py-3.5 text-slate-700">{p.page || "—"}</td>
                             <td className="px-5 py-3.5">
-                              <span className="rounded bg-amber-50 border border-amber-200 px-1.5 py-0.5 font-bold text-amber-800">
+                              <span className="rounded bg-slate-100 border border-slate-200 px-1.5 py-0.5 font-bold text-slate-700">
                                 {p.order ?? "—"}
                               </span>
                             </td>
@@ -885,8 +871,8 @@ export default function PolicyBundlesPoliciesDashboard() {
 
                         {/* STATUS */}
                         <td className="px-5 py-3.5">
-                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">
+                            <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
                             Active
                           </span>
                         </td>

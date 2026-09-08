@@ -9,6 +9,8 @@ import {
   type FieldPermission,
 } from "@/lib/permissions";
 import api from "../app/common";
+import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
 
 // ── Permission keys used by this form ────────────────────────────────────────
 
@@ -17,6 +19,7 @@ const PERM_BASIC = "userManagement-user-basicDetails";
 const PERM_CONTACT = "userManagement-user-contactDetails";
 const PERM_ROLE = "userManagement-user-roleAccess";
 const PERM_ROLE_VIEW = "userManagement-user-roleAccess-view";
+
 // Action-level permissions
 const PERM_CREATE = "userManagement-createUser";
 const PERM_UPDATE = "userManagement-updateUser";
@@ -36,12 +39,7 @@ export interface UserFormData {
   department: string;
 }
 
-type FormMode =
-  | "create"
-  | "update"
-  | "deactivate"
-  | "activate";
-
+type FormMode = "create" | "update" | "deactivate" | "activate";
 type SectionMode = "edit" | "view" | "none";
 
 export interface UserFormProps {
@@ -52,19 +50,13 @@ export interface UserFormProps {
    * "activate"   – pre-filled read-only form, gated by activateUser permission
    */
   mode: FormMode;
-
   permissions: Permission[];
-
   /** Field-level (p3) access — refines what's editable/viewable within a section the role can already see. */
   fieldPermissions?: FieldPermission[];
-
   /** Pre-fill values for update / deactivate / activate mode. */
   initialData?: Partial<UserFormData>;
-
   userId?: number;
-
   onSuccess?: () => void;
-
   onCancel?: () => void;
 }
 
@@ -97,69 +89,40 @@ export default function UserForm({
 
   const [saved, setSaved] = useState(false);
   const [reason, setReason] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // ── Resolve section modes from backend permissions ─────────────────────────
 
-  const rawBasicMode: SectionMode = getSectionMode(
-    permissions,
-    PERM_BASIC,
-  );
-
-  const rawContactMode: SectionMode = getSectionMode(
-    permissions,
-    PERM_CONTACT,
-  );
-
+  const rawBasicMode: SectionMode = getSectionMode(permissions, PERM_BASIC);
+  const rawContactMode: SectionMode = getSectionMode(permissions, PERM_CONTACT);
   const rawRoleMode: SectionMode = (() => {
-    const editMode = getSectionMode(
-      permissions,
-      PERM_ROLE,
-    );
-
-    if (editMode !== "none") {
-      return editMode;
-    }
-
-    return getSectionMode(
-      permissions,
-      PERM_ROLE_VIEW,
-    );
+    const editMode = getSectionMode(permissions, PERM_ROLE);
+    if (editMode !== "none") return editMode;
+    return getSectionMode(permissions, PERM_ROLE_VIEW);
   })();
-  // Activate and deactivate are status actions.
-  // User details should be read-only for both.
-  const isStatusAction =
-    mode === "deactivate" || mode === "activate";
+
+  // Activate and deactivate are status actions. User details should be read-only for both.
+  const isStatusAction = mode === "deactivate" || mode === "activate";
 
   const basicMode: SectionMode =
-    isStatusAction && rawBasicMode !== "none"
-      ? "view"
-      : rawBasicMode;
-
+    isStatusAction && rawBasicMode !== "none" ? "view" : rawBasicMode;
   const contactMode: SectionMode =
-    isStatusAction && rawContactMode !== "none"
-      ? "view"
-      : rawContactMode;
-
+    isStatusAction && rawContactMode !== "none" ? "view" : rawContactMode;
   const roleMode: SectionMode =
-    isStatusAction && rawRoleMode !== "none"
-      ? "view"
-      : rawRoleMode;
+    isStatusAction && rawRoleMode !== "none" ? "view" : rawRoleMode;
 
   // ── Resolve field-level (p3) modes, falling back to the section mode ───────
-  // when a role has no field-level grants yet (keeps older roles working).
-
   function resolveFieldMode(
     section: string,
     field: string,
-    sectionFallback: SectionMode,
+    sectionFallback: SectionMode
   ): SectionMode {
     const raw = getFieldMode(
       fieldPermissions,
       section,
       field,
-      sectionFallback,
+      sectionFallback
     );
-
     return isStatusAction && raw !== "none" ? "view" : raw;
   }
 
@@ -176,25 +139,10 @@ export default function UserForm({
 
   // ── Action permissions ─────────────────────────────────────────────────────
 
-  const canCreate = hasPermission(
-    permissions,
-    PERM_CREATE,
-  );
-
-  const canUpdate = hasPermission(
-    permissions,
-    PERM_UPDATE,
-  );
-
-  const canDeactivate = hasPermission(
-    permissions,
-    PERM_DEACTIVATE,
-  );
-
-  const canActivate = hasPermission(
-    permissions,
-    PERM_ACTIVATE,
-  );
+  const canCreate = hasPermission(permissions, PERM_CREATE);
+  const canUpdate = hasPermission(permissions, PERM_UPDATE);
+  const canDeactivate = hasPermission(permissions, PERM_DEACTIVATE);
+  const canActivate = hasPermission(permissions, PERM_ACTIVATE);
 
   // ── Primary action permission ──────────────────────────────────────────────
 
@@ -202,15 +150,12 @@ export default function UserForm({
     mode === "create"
       ? canCreate
       : mode === "update"
-        ? canUpdate
-        : mode === "deactivate"
-          ? canDeactivate
-          : canActivate;
+      ? canUpdate
+      : mode === "deactivate"
+      ? canDeactivate
+      : canActivate;
 
-  function set(
-    key: keyof UserFormData,
-    value: string,
-  ) {
+  function set(key: keyof UserFormData, value: string) {
     setFields((prev) => ({
       ...prev,
       [key]: value,
@@ -219,16 +164,13 @@ export default function UserForm({
 
   // ── Submit ─────────────────────────────────────────────────────────────────
 
-  async function handleSubmit(
-    e: React.FormEvent,
-  ) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!actionAllowed) {
-      return;
-    }
+    if (!actionAllowed) return;
 
     try {
+      setLoading(true);
       const payload = {
         employee_id: fields.employeeId,
         first_name: fields.firstName,
@@ -251,134 +193,86 @@ export default function UserForm({
               "Content-Type": "application/json",
             },
             body: JSON.stringify(payload),
-          },
+          }
         );
 
         if (!response.ok) {
-          const errorData = await response
-            .json()
-            .catch(() => null);
-
-          throw new Error(
-            errorData?.message ||
-              "Failed to create user",
-          );
+          const errorData = await response.json().catch(() => null);
+          throw new Error(errorData?.message || "Failed to create user");
         }
-      }
-
-      // UPDATE
-      else if (mode === "update" && userId) {
-        await api.put(
-          `/user-management/users/${userId}`,
-          payload,
-        );
-      }
-
-      // DEACTIVATE
-      else if (
-        mode === "deactivate" &&
-        userId
-      ) {
-        await api.patch(
-          `/user-management/users/${userId}/deactivate`,
-        );
-      }
-
-      // ACTIVATE
-      else if (
-        mode === "activate" &&
-        userId
-      ) {
-        await api.patch(
-          `/user-management/users/${userId}/activate`,
-        );
-      }
-
-      else {
+      } else if (mode === "update" && userId) {
+        await api.put(`/user-management/users/${userId}`, payload);
+      } else if (mode === "deactivate" && userId) {
+        await api.patch(`/user-management/users/${userId}/deactivate`);
+      } else if (mode === "activate" && userId) {
+        await api.patch(`/user-management/users/${userId}/activate`);
+      } else {
         return;
       }
 
       setSaved(true);
 
       if (onSuccess) {
-        // Give the success state a moment to render,
-        // then return to the parent page.
         setTimeout(() => {
           onSuccess();
         }, 500);
       }
     } catch (error: any) {
-      console.error(
-        "User save failed:",
-        error,
-      );
-
-      console.error(
-        "Response:",
-        error?.message,
-      );
+      console.error("User save failed:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
-  // ── Success ────────────────────────────────────────────────────────────────
+  // ── Success State ───────────────────────────────────────────────────────────
 
   if (saved) {
     const successLabel =
       mode === "create"
         ? "created"
         : mode === "update"
-          ? "updated"
-          : mode === "deactivate"
-            ? "deactivated"
-            : "activated";
-
-    const resetLabel =
-      mode === "create"
-        ? "Add another"
-        : mode === "update"
-          ? "Edit again"
-          : "Back";
+        ? "updated"
+        : mode === "deactivate"
+        ? "deactivated"
+        : "activated";
 
     return (
-      <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
-        ✓ User {successLabel} successfully.
-
-        <button
+      <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs text-center space-y-3">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 text-lg">
+          ✓
+        </div>
+        <h3 className="text-sm font-bold text-neutral-900">
+          User {successLabel} successfully.
+        </h3>
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={() => {
             setSaved(false);
             if (mode !== "create" && onCancel) {
               onCancel();
             }
           }}
-          className="ml-3 underline text-emerald-600"
         >
-          {resetLabel}
-        </button>
+          {mode === "create" ? "Add Another User" : "Done"}
+        </Button>
       </div>
     );
   }
 
-  // ── No section access ──────────────────────────────────────────────────────
+  // ── No Access ──────────────────────────────────────────────────────────────
 
-  if (
-    basicMode === "none" &&
-    contactMode === "none" &&
-    roleMode === "none"
-  ) {
+  if (basicMode === "none" && contactMode === "none" && roleMode === "none") {
     return (
-      <div className="rounded-xl border border-red-100 bg-red-50 px-5 py-8 text-center text-sm text-red-500">
+      <div className="rounded-2xl border border-neutral-200 bg-neutral-50 p-8 text-center text-xs text-neutral-500">
         You do not have permission to view this form.
       </div>
     );
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-6"
-    >
+    <form onSubmit={handleSubmit} className="space-y-6">
       {/* ── Section 1: Basic Details ── */}
-
       {basicMode !== "none" && (
         <FormSection
           title="Basic Details"
@@ -390,16 +284,9 @@ export default function UserForm({
               <Field
                 label="First Name"
                 value={fields.firstName}
-                onChange={(v) =>
-                  set("firstName", v)
-                }
-                readonly={
-                  firstNameMode === "view"
-                }
-                required={
-                  firstNameMode === "edit" &&
-                  mode === "create"
-                }
+                onChange={(v) => set("firstName", v)}
+                readonly={firstNameMode === "view"}
+                required={firstNameMode === "edit" && mode === "create"}
               />
             )}
 
@@ -407,16 +294,9 @@ export default function UserForm({
               <Field
                 label="Last Name"
                 value={fields.lastName}
-                onChange={(v) =>
-                  set("lastName", v)
-                }
-                readonly={
-                  lastNameMode === "view"
-                }
-                required={
-                  lastNameMode === "edit" &&
-                  mode === "create"
-                }
+                onChange={(v) => set("lastName", v)}
+                readonly={lastNameMode === "view"}
+                required={lastNameMode === "edit" && mode === "create"}
               />
             )}
 
@@ -424,12 +304,8 @@ export default function UserForm({
               <Field
                 label="Employee ID"
                 value={fields.employeeId}
-                onChange={(v) =>
-                  set("employeeId", v)
-                }
-                readonly={
-                  employeeIdMode === "view"
-                }
+                onChange={(v) => set("employeeId", v)}
+                readonly={employeeIdMode === "view"}
                 placeholder="e.g. EMP-00123"
               />
             )}
@@ -438,7 +314,6 @@ export default function UserForm({
       )}
 
       {/* ── Section 2: Contact Details ── */}
-
       {contactMode !== "none" && (
         <FormSection
           title="Contact Details"
@@ -448,63 +323,42 @@ export default function UserForm({
           <div className="grid gap-4 sm:grid-cols-2">
             {emailMode !== "none" && (
               <Field
-                label="Email"
+                label="Email Address"
                 type="email"
                 value={fields.email}
-                onChange={(v) =>
-                  set("email", v)
-                }
-                readonly={
-                  emailMode === "view"
-                }
-                required={
-                  emailMode === "edit" &&
-                  mode === "create"
-                }
+                onChange={(v) => set("email", v)}
+                readonly={emailMode === "view"}
+                required={emailMode === "edit" && mode === "create"}
               />
             )}
 
             {phoneMode !== "none" && (
               <Field
-                label="Phone"
+                label="Phone Number"
                 type="tel"
                 value={fields.phone}
-                onChange={(v) =>
-                  set("phone", v)
-                }
-                readonly={
-                  phoneMode === "view"
-                }
+                onChange={(v) => set("phone", v)}
+                readonly={phoneMode === "view"}
                 placeholder="+91 XXXXX XXXXX"
               />
             )}
 
             {addressMode !== "none" && (
               <div className="sm:col-span-2">
-                <label className="mb-1.5 block text-xs font-semibold text-slate-600">
-                  Address
+                <label className="mb-1.5 block text-xs font-semibold text-neutral-700">
+                  Office Address
                 </label>
-
                 {addressMode === "view" ? (
-                  <div className="min-h-[68px] w-full rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                    {fields.address || (
-                      <span className="text-slate-300">
-                        —
-                      </span>
-                    )}
+                  <div className="min-h-[50px] w-full rounded-lg border border-neutral-100 bg-neutral-50 px-3 py-2 text-xs text-neutral-600">
+                    {fields.address || <span className="text-neutral-300">—</span>}
                   </div>
                 ) : (
                   <textarea
                     rows={2}
                     value={fields.address}
-                    onChange={(e) =>
-                      set(
-                        "address",
-                        e.target.value,
-                      )
-                    }
+                    onChange={(e) => set("address", e.target.value)}
                     placeholder="Office / building address"
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/50 p-3 text-xs text-neutral-800 placeholder-neutral-400 outline-none focus:border-neutral-400 focus:bg-white focus:ring-1 focus:ring-neutral-400"
                   />
                 )}
               </div>
@@ -514,24 +368,19 @@ export default function UserForm({
       )}
 
       {/* ── Section 3: Role & Access ── */}
-
       {roleMode !== "none" && (
         <FormSection
           title="Role & Access"
           mode={roleMode}
-          description="Assign the user's role, department, and view their permissions."
+          description="Assign the user's role, department, and view assigned access policies."
         >
           <div className="grid gap-4 sm:grid-cols-2">
             {roleFieldMode !== "none" && (
               <Field
                 label="Role"
                 value={fields.role}
-                onChange={(v) =>
-                  set("role", v)
-                }
-                readonly={
-                  roleFieldMode === "view"
-                }
+                onChange={(v) => set("role", v)}
+                readonly={roleFieldMode === "view"}
                 placeholder="e.g. Support Initiator"
               />
             )}
@@ -540,38 +389,29 @@ export default function UserForm({
               <Field
                 label="Department"
                 value={fields.department}
-                onChange={(v) =>
-                  set(
-                    "department",
-                    v,
-                  )
-                }
-                readonly={
-                  departmentMode === "view"
-                }
-                placeholder="e.g. HCP Operations"
+                onChange={(v) => set("department", v)}
+                readonly={departmentMode === "view"}
+                placeholder="e.g. Operations"
               />
             )}
           </div>
 
-          {/* Permissions display */}
-          <div className="mt-4">
-            <p className="mb-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Assigned Permissions
+          {/* Assigned Permissions Tags */}
+          <div className="mt-4 pt-4 border-t border-neutral-100">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
+              Assigned Casbin Policies
             </p>
 
             {permissions.length === 0 ? (
-              <p className="text-xs text-slate-400">
-                No permissions assigned.
-              </p>
+              <p className="text-xs text-neutral-400">No permissions assigned.</p>
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 {permissions.map((p) => (
                   <span
                     key={p.permission}
-                    className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-600"
+                    className="inline-flex items-center rounded-md border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-[11px] font-mono text-neutral-600"
                   >
-                    <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-violet-400" />
+                    <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-neutral-400" />
                     {p.permission}
                   </span>
                 ))}
@@ -581,95 +421,77 @@ export default function UserForm({
         </FormSection>
       )}
 
-      {/* ── Deactivation reason ── */}
-
+      {/* ── Deactivation Reason ── */}
       {mode === "deactivate" && (
-        <section className="rounded-2xl border border-red-100 bg-red-50 p-6">
-          <h3 className="mb-1 font-semibold text-red-700">
+        <section className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-6">
+          <h3 className="mb-1 text-sm font-bold text-neutral-900">
             Deactivation Reason
           </h3>
-
-          <p className="mb-3 text-xs text-red-400">
-            Required. Explain why this user is being deactivated.
+          <p className="mb-3 text-xs text-neutral-500">
+            Required. Explain why this user account is being deactivated.
           </p>
 
           {actionAllowed ? (
             <textarea
               rows={3}
               value={reason}
-              onChange={(e) =>
-                setReason(e.target.value)
-              }
+              onChange={(e) => setReason(e.target.value)}
               required
-              placeholder="e.g. Employee separation, role change…"
-              className="w-full rounded-lg border border-red-200 bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100"
+              placeholder="e.g. Employee separation, role transfer…"
+              className="w-full rounded-lg border border-neutral-200 bg-white p-3 text-xs text-neutral-800 placeholder-neutral-400 outline-none focus:border-neutral-400 focus:ring-1 focus:ring-neutral-400"
             />
           ) : (
-            <p className="text-xs text-red-400">
+            <p className="text-xs text-red-500">
               You do not have permission to deactivate users.
             </p>
           )}
         </section>
       )}
 
-      {/* ── Activation information ── */}
-
+      {/* ── Activation Notice ── */}
       {mode === "activate" && (
-        <section className="rounded-2xl border border-emerald-100 bg-emerald-50 p-6">
-          <h3 className="mb-1 font-semibold text-emerald-700">
-            Activate User
+        <section className="rounded-2xl border border-neutral-200 bg-neutral-50/60 p-6">
+          <h3 className="mb-1 text-sm font-bold text-neutral-900">
+            Activate Account
           </h3>
-
-          <p className="text-xs text-emerald-600">
-            This user is currently inactive. Activating the user
-            will restore their active status.
+          <p className="text-xs text-neutral-500">
+            This account is currently inactive. Activating the user will restore their authorization access.
           </p>
         </section>
       )}
 
-      {/* ── Action buttons ── */}
-
+      {/* ── Actions Row ── */}
       <div className="flex items-center gap-3 pt-2">
         {actionAllowed ? (
-          <button
+          <Button
             type="submit"
-            className={`rounded-lg px-6 py-2.5 text-sm font-semibold text-white shadow-md transition ${
-              mode === "deactivate"
-                ? "bg-red-600 shadow-red-600/20 hover:bg-red-500"
-                : mode === "activate"
-                  ? "bg-emerald-600 shadow-emerald-600/20 hover:bg-emerald-500"
-                  : "bg-violet-600 shadow-violet-600/20 hover:bg-violet-500"
-            }`}
+            variant={mode === "deactivate" ? "danger" : "primary"}
+            size="md"
+            isLoading={loading}
           >
             {mode === "create"
               ? "Create User"
               : mode === "update"
-                ? "Update User"
-                : mode === "deactivate"
-                  ? "Deactivate User"
-                  : "Activate User"}
-          </button>
+              ? "Update User"
+              : mode === "deactivate"
+              ? "Deactivate Account"
+              : "Activate Account"}
+          </Button>
         ) : (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-6 py-2.5 text-sm text-slate-400">
-            {mode === "create"
-              ? "Create"
-              : mode === "update"
-                ? "Update"
-                : mode === "deactivate"
-                  ? "Deactivate"
-                  : "Activate"}{" "}
-            not permitted
+          <div className="rounded-lg border border-neutral-200 bg-neutral-100 px-4 py-2 text-xs font-semibold text-neutral-400">
+            Action not permitted
           </div>
         )}
 
         {onCancel && (
-          <button
+          <Button
             type="button"
+            variant="secondary"
+            size="md"
             onClick={onCancel}
-            className="rounded-lg border border-slate-200 px-6 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
           >
             Cancel
-          </button>
+          </Button>
         )}
       </div>
     </form>
@@ -690,40 +512,20 @@ function FormSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex items-start justify-between gap-4">
+    <section className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xs">
+      <div className="mb-4 flex items-center justify-between gap-4 border-b border-neutral-100 pb-3">
         <div>
-          <h3 className="font-semibold text-slate-900">
-            {title}
-          </h3>
-
+          <h3 className="text-sm font-bold text-neutral-900">{title}</h3>
           {description && (
-            <p className="mt-0.5 text-xs text-slate-400">
+            <p className="mt-0.5 text-xs text-neutral-500 font-normal">
               {description}
             </p>
           )}
         </div>
 
-        {/* Permission badge */}
-        <span
-          className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
-            mode === "edit"
-              ? "bg-emerald-50 text-emerald-700"
-              : "bg-amber-50 text-amber-600"
-          }`}
-        >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              mode === "edit"
-                ? "bg-emerald-500"
-                : "bg-amber-400"
-            }`}
-          />
-
-          {mode === "edit"
-            ? "Editable"
-            : "View Only"}
-        </span>
+        <Badge variant="neutral" dot={mode === "edit"}>
+          {mode === "edit" ? "Editable" : "View Only"}
+        </Badge>
       </div>
 
       {children}
@@ -752,34 +554,23 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+      <label className="mb-1.5 block text-xs font-semibold text-neutral-700">
         {label}
-
-        {required && (
-          <span className="ml-0.5 text-red-500">
-            *
-          </span>
-        )}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
       </label>
 
       {readonly ? (
-        <div className="w-full rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-          {value || (
-            <span className="text-slate-300">
-              —
-            </span>
-          )}
+        <div className="w-full rounded-lg border border-neutral-100 bg-neutral-50 px-3.5 py-2 text-xs text-neutral-700">
+          {value || <span className="text-neutral-300">—</span>}
         </div>
       ) : (
         <input
           type={type}
           value={value}
-          onChange={(e) =>
-            onChange(e.target.value)
-          }
+          onChange={(e) => onChange(e.target.value)}
           required={required}
           placeholder={placeholder}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+          className="w-full rounded-lg border border-neutral-200 bg-neutral-50/50 px-3.5 py-2 text-xs text-neutral-800 placeholder-neutral-400 outline-none transition focus:border-neutral-400 focus:bg-white focus:ring-1 focus:ring-neutral-400"
         />
       )}
     </div>
