@@ -36,6 +36,9 @@ type RefreshBypassRule = {
   action?: "reject" | "redirect-login";
 };
 
+// Some endpoints should never trigger a silent refresh cycle. If the user is
+// trying to log in or the refresh token itself has failed, the UI must surface
+// that status immediately instead of hiding it behind a retry loop.
 const REFRESH_BYPASS_RULES: ReadonlyArray<RefreshBypassRule> = [
   // Login failures must be handled by the login page itself, not refresh logic.
   { path: "/login", methods: ["post"], action: "reject" },
