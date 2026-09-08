@@ -89,6 +89,7 @@ export default function CreatePolicyBundleSinglePage() {
               Create New Policy Bundle
             </h1>
             <p className="mt-0.5 text-xs text-slate-500">
+              Configure Section, Menu, and Field resource permissions with cascading hierarchy.
               Configure Menu (P), Section (P2), and Field (P3) resource permissions with cascading hierarchy.
             </p>
           </div>
@@ -190,6 +191,7 @@ export default function CreatePolicyBundleSinglePage() {
                   Select Policies by Resource Hierarchy
                 </h2>
                 <p className="text-xs text-slate-500">
+                  Cascading selection: Section (p) → Menu (p2) → Field (p3). Deselecting parent hides & deselects children.
                   Cascading selection: Menu (P) → Section (P2) → Field (P3). Deselecting parent hides & deselects children.
                 </p>
               </div>
@@ -222,7 +224,7 @@ export default function CreatePolicyBundleSinglePage() {
             <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700">
               {counts.sections} Sections (P2)
             </span>
-            <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-800">
+            <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
               {counts.fields} Fields (P3)
             </span>
             <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-black text-[#C81E1E]">

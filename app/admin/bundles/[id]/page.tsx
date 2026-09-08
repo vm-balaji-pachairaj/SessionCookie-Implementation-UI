@@ -47,7 +47,7 @@ function describePolicy(p: BundlePolicy): string {
   }
   if (p.ptype === "p2") {
     return (
-      [p.page, p.section || p.module].filter(Boolean).join(" / ") +
+      [p.page, p.section || p.module || p.displayName].filter(Boolean).join(" / ") +
       (p.access ? ` · ${p.access}` : "")
     );
   }
@@ -321,10 +321,14 @@ export default function PolicyBundleDetailPage() {
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-medium text-slate-400">P (Sections)</p>
+              <p className="mt-1 text-2xl font-bold text-violet-700">{pCount}</p>
               <p className="text-xs font-medium text-slate-400">P (Menus)</p>
               <p className="mt-1 text-2xl font-bold text-purple-700">{pCount}</p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-medium text-slate-400">P2 (Menus)</p>
+              <p className="mt-1 text-2xl font-bold text-sky-700">{p2Count}</p>
               <p className="text-xs font-medium text-slate-400">P2 (Sections)</p>
               <p className="mt-1 text-2xl font-bold text-blue-700">{p2Count}</p>
             </div>
@@ -443,6 +447,7 @@ export default function PolicyBundleDetailPage() {
                         : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
+                    P ({pCount})
                     Menus (P) ({pCount})
                   </button>
                   <button
@@ -454,6 +459,7 @@ export default function PolicyBundleDetailPage() {
                         : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
+                    P2 ({p2Count})
                     Sections (P2) ({p2Count})
                   </button>
                   <button
@@ -465,6 +471,7 @@ export default function PolicyBundleDetailPage() {
                         : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
+                    P3 ({p3Count})
                     Fields (P3) ({p3Count})
                   </button>
                 </div>
@@ -540,7 +547,7 @@ export default function PolicyBundleDetailPage() {
                                     ? "bg-purple-50 text-purple-700"
                                     : p.ptype === "p2"
                                       ? "bg-sky-50 text-sky-700"
-                                      : "bg-amber-50 text-amber-700"
+                                      : "bg-emerald-50 text-emerald-700"
                                 }`}
                               >
                                 {p.ptype.toUpperCase()}

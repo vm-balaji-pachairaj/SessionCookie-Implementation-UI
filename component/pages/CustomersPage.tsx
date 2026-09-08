@@ -100,6 +100,10 @@ export default function CustomersPage({
             <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-800">
               Section: Customers
             </span>
+            <span className="text-slate-300">•</span>
+            <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-purple-800">
+              Menu: Customer Directory
+            </span>
           </div>
           <h1 className="mt-2 text-2xl font-black text-slate-900 tracking-tight">
             Customer Directory

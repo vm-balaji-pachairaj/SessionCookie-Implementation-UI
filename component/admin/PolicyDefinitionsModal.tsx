@@ -1,17 +1,18 @@
 "use client";
 
+import React from "react";
+
 export interface PolicyDefinition {
   ptype: "p" | "p2" | "p3";
-  // p-type fields (also reused by p3)
+  key?: string | null;
   lob?: string | null;
   page?: string | null;
+  parent?: string | null;
   module?: string | null;
   section?: string | null;
-  access?: string | null;
-  // p3-type field
   field?: string | null;
-  // p2-type fields
-  parent?: string | null;
+  access?: string | null;
+  meta?: string | null;
   displayName?: string | null;
   route?: string | null;
   icon?: string | null;
@@ -163,7 +164,7 @@ export default function PolicyDefinitionsModal({
                           ? "bg-purple-100 text-purple-700"
                           : def.ptype === "p2"
                           ? "bg-blue-100 text-blue-700"
-                          : "bg-amber-100 text-amber-800"
+                          : "bg-emerald-100 text-emerald-800"
                       }`}
                     >
                       Type: {def.ptype} ({def.ptype === "p" ? "Menu" : def.ptype === "p2" ? "Section" : "Field"})

@@ -87,9 +87,7 @@ function flattenPolicies(policies: PolicySummary[]): PermissionEntry[] {
 
 export default function EnforcerCheckerPage() {
   const [roles, setRoles] = useState<RoleSummary[]>([]);
-  const [permissionEntries, setPermissionEntries] = useState<
-    PermissionEntry[]
-  >([]);
+  const [permissionEntries, setPermissionEntries] = useState<PermissionEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -98,9 +96,7 @@ export default function EnforcerCheckerPage() {
   const [ptypeFilter, setPtypeFilter] = useState<Ptype>("p");
 
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
-  const [selectedEntry, setSelectedEntry] = useState<PermissionEntry | null>(
-    null
-  );
+  const [selectedEntry, setSelectedEntry] = useState<PermissionEntry | null>(null);
 
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
@@ -161,9 +157,9 @@ export default function EnforcerCheckerPage() {
       setResult(null);
 
       const body =
-        selectedEntry.ptype === "p2"
+        selectedEntry.ptype === "p"
           ? {
-              ptype: "p2" as const,
+              ptype: "p" as const,
               role: selectedRole,
               key: selectedEntry.permission,
             }
@@ -179,14 +175,14 @@ export default function EnforcerCheckerPage() {
                 access: selectedEntry.access,
               }
             : {
-              ptype: "p" as const,
-              role: selectedRole,
-              lob: selectedEntry.lob,
-              page: selectedEntry.page,
-              module: selectedEntry.module,
-              section: selectedEntry.section,
-              access: selectedEntry.access,
-            };
+                ptype: "p2" as const,
+                role: selectedRole,
+                lob: selectedEntry.lob,
+                page: selectedEntry.page,
+                module: selectedEntry.module,
+                section: selectedEntry.section,
+                access: selectedEntry.access,
+              };
 
       const res = await axios.post<CheckResult>(
         `${ADMIN_API}/enforcer/check`,
@@ -214,7 +210,9 @@ export default function EnforcerCheckerPage() {
               Enforcer Checker
             </h1>
             <p className="mt-1 text-sm text-slate-500">
+              Pick a role and a policy (P section, P2 menu, or P3 field), then verify
               Pick a role and a resource (P menu, P2 section, or P3 field), then verify
+              Pick a role and a resource (P Menu, P2 Section, or P3 Field), then verify
               authorization evaluated through the role&apos;s assigned Policy Bundles
               (Role ──(g3)──&gt; Policy Bundle ──(g)──&gt; Policy).
             </p>
@@ -360,26 +358,28 @@ export default function EnforcerCheckerPage() {
                           <span className="mt-1 block truncate text-[11px] text-slate-400">
                             {entry.ptype === "p"
                               ? [entry.displayName || entry.permission, entry.route].filter(Boolean).join(" · ")
-                              : entry.ptype === "p3"
-                                ? [
-                                    entry.lob,
-                                    entry.page,
-                                    entry.module,
-                                    entry.section,
-                                    entry.field,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" / ") +
-                                  (entry.access ? ` · ${entry.access}` : "")
-                                : [
-                                  entry.lob,
-                                  entry.page,
-                                  entry.module,
-                                  entry.section,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" / ") +
-                                (entry.access ? ` · ${entry.access}` : "")}
+                              : entry.ptype === "p2"
+                                ? [entry.lob, entry.parent, entry.displayName].filter(Boolean).join(" / ")
+                                : entry.ptype === "p3"
+                                  ? [
+                                      entry.lob,
+                                      entry.page,
+                                      entry.module,
+                                      entry.section,
+                                      entry.field,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" / ") +
+                                    (entry.access ? ` · ${entry.access}` : "")
+                                  : [
+                                      entry.lob,
+                                      entry.page,
+                                      entry.module,
+                                      entry.section,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" / ") +
+                                    (entry.access ? ` · ${entry.access}` : "")}
                           </span>
                         </div>
                         {selectedEntry?.key === entry.key && (

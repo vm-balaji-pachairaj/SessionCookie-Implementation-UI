@@ -533,6 +533,7 @@ export default function PolicyBundlesPoliciesDashboard() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
+              <span>All Permissions</span>
               <span>All Policies</span>
               <span>All Policies (Audit Table)</span>
               <span
@@ -556,6 +557,7 @@ export default function PolicyBundlesPoliciesDashboard() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
+              <span>Section Access (p)</span>
               <span>Menu Access (p)</span>
               <span
                 className={`rounded-full px-2 py-0.2 text-[10px] ${
@@ -578,6 +580,7 @@ export default function PolicyBundlesPoliciesDashboard() {
                   : "text-slate-600 hover:text-slate-900"
               }`}
             >
+              <span>Menu Access (p2)</span>
               <span>Section Access (p2)</span>
               <span
                 className={`rounded-full px-2 py-0.2 text-[10px] ${
@@ -736,6 +739,7 @@ export default function PolicyBundlesPoliciesDashboard() {
                         <th className="px-5 py-3.5">Access</th>
                       </>
                     )}
+
                     {activeTab === "p3" && (
                       <>
                         <th className="px-5 py-3.5">Page / Module</th>
@@ -784,11 +788,10 @@ export default function PolicyBundlesPoliciesDashboard() {
                       <tr
                         key={`${p.permission}-${idx}`}
                         className={`transition hover:bg-slate-50/80 ${
-                          // Alternating left vertical stripe matching Scan Tag
-                          p.ptype === "p2"
+                          p.ptype === "p"
                             ? "border-l-4 border-purple-500"
-                            : p.ptype === "p3"
-                            ? "border-l-4 border-amber-500"
+                            : p.ptype === "p2"
+                            ? "border-l-4 border-blue-500"
                             : "border-l-4 border-emerald-500"
                         }`}
                       >
@@ -802,11 +805,11 @@ export default function PolicyBundlesPoliciesDashboard() {
                           <td className="px-5 py-3.5">
                             <span
                               className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
-                                p.ptype === "p2"
+                                p.ptype === "p"
                                   ? "bg-purple-100 text-purple-700"
-                                  : p.ptype === "p3"
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-blue-100 text-blue-700"
+                                  : p.ptype === "p2"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-emerald-100 text-emerald-800"
                               }`}
                             >
                               {p.ptype}
